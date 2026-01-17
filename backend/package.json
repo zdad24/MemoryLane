@@ -1,0 +1,30 @@
+{
+  "name": "memorylane-backend",
+  "version": "1.0.0",
+  "description": "Backend API for MemoryLane AI",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": [
+    "memorylane",
+    "video",
+    "ai",
+    "memories"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "firebase-admin": "^13.0.2",
+    "multer": "^1.4.5-lts.1",
+    "twelvelabs-js": "^0.2.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}
