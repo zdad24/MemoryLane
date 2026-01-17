@@ -1,0 +1,281 @@
+import type { EmotionType } from "./mock-data"
+
+export interface TimelineDataPoint {
+  date: string
+  month: string
+  year: number
+  joy: number
+  love: number
+  calm: number
+  excitement: number
+  nostalgia: number
+  sadness: number
+  videoCount: number
+}
+
+export interface Milestone {
+  id: string
+  date: string
+  type: "birthday" | "wedding" | "graduation" | "vacation" | "birth" | "holiday"
+  title: string
+  description: string
+  videoId?: string
+  emotion: EmotionType
+}
+
+export const milestoneIcons = {
+  birthday: "🎂",
+  wedding: "💍",
+  graduation: "🎓",
+  vacation: "✈️",
+  birth: "👶",
+  holiday: "🎄",
+}
+
+export const mockTimelineData: TimelineDataPoint[] = [
+  {
+    date: "2023-01",
+    month: "Jan",
+    year: 2023,
+    joy: 20,
+    love: 15,
+    calm: 30,
+    excitement: 10,
+    nostalgia: 25,
+    sadness: 5,
+    videoCount: 3,
+  },
+  {
+    date: "2023-02",
+    month: "Feb",
+    year: 2023,
+    joy: 35,
+    love: 45,
+    calm: 20,
+    excitement: 15,
+    nostalgia: 10,
+    sadness: 5,
+    videoCount: 5,
+  },
+  {
+    date: "2023-03",
+    month: "Mar",
+    year: 2023,
+    joy: 50,
+    love: 20,
+    calm: 25,
+    excitement: 30,
+    nostalgia: 15,
+    sadness: 5,
+    videoCount: 8,
+  },
+  {
+    date: "2023-04",
+    month: "Apr",
+    year: 2023,
+    joy: 30,
+    love: 25,
+    calm: 35,
+    excitement: 20,
+    nostalgia: 20,
+    sadness: 10,
+    videoCount: 4,
+  },
+  {
+    date: "2023-05",
+    month: "May",
+    year: 2023,
+    joy: 40,
+    love: 30,
+    calm: 20,
+    excitement: 60,
+    nostalgia: 15,
+    sadness: 5,
+    videoCount: 7,
+  },
+  {
+    date: "2023-06",
+    month: "Jun",
+    year: 2023,
+    joy: 55,
+    love: 70,
+    calm: 25,
+    excitement: 45,
+    nostalgia: 20,
+    sadness: 5,
+    videoCount: 12,
+  },
+  {
+    date: "2023-07",
+    month: "Jul",
+    year: 2023,
+    joy: 75,
+    love: 35,
+    calm: 40,
+    excitement: 55,
+    nostalgia: 15,
+    sadness: 5,
+    videoCount: 15,
+  },
+  {
+    date: "2023-08",
+    month: "Aug",
+    year: 2023,
+    joy: 60,
+    love: 40,
+    calm: 50,
+    excitement: 35,
+    nostalgia: 25,
+    sadness: 10,
+    videoCount: 9,
+  },
+  {
+    date: "2023-09",
+    month: "Sep",
+    year: 2023,
+    joy: 45,
+    love: 30,
+    calm: 35,
+    excitement: 70,
+    nostalgia: 20,
+    sadness: 5,
+    videoCount: 11,
+  },
+  {
+    date: "2023-10",
+    month: "Oct",
+    year: 2023,
+    joy: 35,
+    love: 25,
+    calm: 40,
+    excitement: 25,
+    nostalgia: 40,
+    sadness: 15,
+    videoCount: 6,
+  },
+  {
+    date: "2023-11",
+    month: "Nov",
+    year: 2023,
+    joy: 30,
+    love: 35,
+    calm: 30,
+    excitement: 20,
+    nostalgia: 45,
+    sadness: 10,
+    videoCount: 5,
+  },
+  {
+    date: "2023-12",
+    month: "Dec",
+    year: 2023,
+    joy: 50,
+    love: 55,
+    calm: 25,
+    excitement: 40,
+    nostalgia: 60,
+    sadness: 5,
+    videoCount: 14,
+  },
+  {
+    date: "2024-01",
+    month: "Jan",
+    year: 2024,
+    joy: 40,
+    love: 30,
+    calm: 35,
+    excitement: 25,
+    nostalgia: 30,
+    sadness: 10,
+    videoCount: 4,
+  },
+  {
+    date: "2024-02",
+    month: "Feb",
+    year: 2024,
+    joy: 55,
+    love: 65,
+    calm: 30,
+    excitement: 35,
+    nostalgia: 15,
+    sadness: 5,
+    videoCount: 8,
+  },
+  {
+    date: "2024-03",
+    month: "Mar",
+    year: 2024,
+    joy: 80,
+    love: 45,
+    calm: 25,
+    excitement: 50,
+    nostalgia: 10,
+    sadness: 5,
+    videoCount: 10,
+  },
+]
+
+export const mockMilestones: Milestone[] = [
+  {
+    id: "m1",
+    date: "2023-02-14",
+    type: "holiday",
+    title: "Valentine's Day",
+    description: "Romantic dinner and surprise gift exchange",
+    emotion: "love",
+  },
+  {
+    id: "m2",
+    date: "2023-05-20",
+    type: "graduation",
+    title: "Graduation Day",
+    description: "College graduation ceremony",
+    videoId: "7",
+    emotion: "excitement",
+  },
+  {
+    id: "m3",
+    date: "2023-06-10",
+    type: "wedding",
+    title: "Wedding Day",
+    description: "Our beautiful wedding celebration",
+    videoId: "4",
+    emotion: "love",
+  },
+  {
+    id: "m4",
+    date: "2023-07-15",
+    type: "vacation",
+    title: "Summer BBQ at the Lake",
+    description: "Annual family gathering at the lake house",
+    videoId: "1",
+    emotion: "joy",
+  },
+  {
+    id: "m5",
+    date: "2023-09-05",
+    type: "birthday",
+    title: "Sarah's 30th Birthday",
+    description: "Surprise birthday party with friends",
+    videoId: "3",
+    emotion: "excitement",
+  },
+  {
+    id: "m6",
+    date: "2023-12-25",
+    type: "holiday",
+    title: "Christmas with Family",
+    description: "Grandpa's stories and family traditions",
+    videoId: "5",
+    emotion: "nostalgia",
+  },
+  {
+    id: "m7",
+    date: "2024-03-18",
+    type: "birth",
+    title: "Baby's First Steps",
+    description: "Emma took her first steps!",
+    videoId: "6",
+    emotion: "joy",
+  },
+]
