@@ -8,9 +8,9 @@ export default function UploadPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
       <main className="flex-1 pt-24 pb-16 px-4">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto flex flex-col items-center">
           {/* Header */}
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 w-full">
             <h1
               className="text-3xl md:text-5xl font-bold mb-4 text-foreground"
               style={{ fontFamily: "var(--font-space-grotesk)" }}
@@ -23,7 +23,9 @@ export default function UploadPage() {
           </div>
 
           {/* Upload zone */}
-          <UploadZone />
+          <div className="w-full flex justify-center">
+            <UploadZone />
+          </div>
 
           {/* Tips */}
           <UploadTips />

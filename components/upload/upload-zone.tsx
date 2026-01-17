@@ -115,7 +115,7 @@ export function UploadZone() {
         onClick={() => fileInputRef.current?.click()}
         className={cn(
           "relative rounded-2xl border-2 border-dashed p-12 transition-all duration-300 cursor-pointer",
-          "flex flex-col items-center justify-center text-center",
+          "flex flex-col items-center justify-center text-center mx-auto",
           isDragging
             ? "border-primary bg-primary/5 scale-[1.02]"
             : "border-border hover:border-primary/50 hover:bg-card/50",
@@ -126,10 +126,10 @@ export function UploadZone() {
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/10 via-[#FF6B9D]/10 to-[#FFD93D]/10 animate-gradient" />
         )}
 
-        <div className="relative z-10">
+        <div className="relative z-10 flex flex-col items-center justify-center">
           <div
             className={cn(
-              "w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300",
+              "w-20 h-20 rounded-full flex items-center justify-center mb-6 transition-all duration-300 mx-auto",
               isDragging ? "bg-primary/20 scale-110" : "bg-secondary",
             )}
           >

@@ -61,12 +61,6 @@ export function HeroSection() {
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>
-          <Link href="/library">
-            <Button size="lg" variant="ghost" className="text-foreground hover:bg-foreground/5 px-8 h-12 text-base">
-              <Play className="w-4 h-4 mr-2" />
-              See Demo
-            </Button>
-          </Link>
         </div>
 
         <div
