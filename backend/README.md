@@ -8,7 +8,7 @@ Node.js Express backend server for the MemoryLane AI application.
 
 - Node.js 18 or higher
 - npm or yarn
-- Firebase project with Firestore enabled
+- Firebase project with Realtime Database enabled
 - TwelveLabs API key
 - Google Gemini API key
 
