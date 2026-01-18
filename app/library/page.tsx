@@ -1,29 +1,100 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { VideoGrid } from "@/components/library/video-grid"
-import { EmotionFilter } from "@/components/library/emotion-filter"
-import { mockVideos, type EmotionType } from "@/lib/mock-data"
-import { Search, SlidersHorizontal, Grid3X3, List } from "lucide-react"
+import { Search, SlidersHorizontal, Grid3X3, List, Loader2, Upload } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { api, type Video } from "@/lib/api"
+import Link from "next/link"
 
 export default function LibraryPage() {
-  const [selectedEmotion, setSelectedEmotion] = useState<EmotionType | "all">("all")
+  const [videos, setVideos] = useState<Video[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [videoDurations, setVideoDurations] = useState<Record<string, number>>({})
 
-  // Calculate emotion counts
-  const emotionCounts = mockVideos.reduce(
-    (acc, video) => {
-      acc[video.emotion] = (acc[video.emotion] || 0) + 1
-      acc.all = (acc.all || 0) + 1
-      return acc
-    },
-    {} as Record<EmotionType | "all", number>,
-  )
+  useEffect(() => {
+    async function fetchVideos() {
+      try {
+        setLoading(true)
+        setError(null)
+        const response = await api.getVideos()
+        setVideos(response.videos || [])
+      } catch (err) {
+        console.error("Failed to fetch videos:", err)
+        setError(err instanceof Error ? err.message : "Failed to load videos")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchVideos()
+  }, [])
+
+  // Extract duration from video elements if not available in video data
+  useEffect(() => {
+    if (videos.length === 0) return
+
+    const loadDurations = async () => {
+      const durationMap: Record<string, number> = {}
+      const promises = videos.map((video) => {
+        if (video.duration && video.duration > 0) {
+          durationMap[video.id] = video.duration
+          return Promise.resolve()
+        }
+
+        return new Promise<void>((resolve) => {
+          const videoEl = document.createElement('video')
+          videoEl.preload = 'metadata'
+          videoEl.src = video.storageUrl
+
+          const handleLoadedMetadata = () => {
+            if (videoEl.duration && isFinite(videoEl.duration)) {
+              durationMap[video.id] = videoEl.duration
+            }
+            resolve()
+          }
+
+          videoEl.addEventListener('loadedmetadata', handleLoadedMetadata)
+          videoEl.addEventListener('error', () => resolve())
+
+          // Timeout after 5 seconds
+          setTimeout(() => resolve(), 5000)
+        })
+      })
+
+      await Promise.all(promises)
+      setVideoDurations(durationMap)
+    }
+
+    loadDurations()
+  }, [videos])
+
+  // Filter videos by search query
+  const filteredVideos = videos.filter((video) => {
+    if (!searchQuery) return true
+    const query = searchQuery.toLowerCase()
+    return (
+      video.originalName?.toLowerCase().includes(query) ||
+      video.fileName?.toLowerCase().includes(query) ||
+      video.summary?.toLowerCase().includes(query)
+    )
+  })
+
+  // Calculate total duration in seconds, then convert to minutes
+  // Use duration from video data if available, otherwise use extracted duration from video elements
+  const totalDurationSeconds = videos.reduce((acc, v) => {
+    const duration = v.duration && v.duration > 0 
+      ? v.duration 
+      : (videoDurations[v.id] || 0)
+    return acc + duration
+  }, 0)
+  const totalMinutes = totalDurationSeconds > 0 ? Math.ceil(totalDurationSeconds / 60) : 0
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -39,8 +110,7 @@ export default function LibraryPage() {
               Your Memory Library
             </h1>
             <p className="text-muted-foreground">
-              {mockVideos.length} videos • {Math.round(mockVideos.reduce((acc, v) => acc + v.durationSeconds, 0) / 60)}{" "}
-              minutes of memories
+              {videos.length} {videos.length === 1 ? "video" : "videos"} • {totalMinutes} {totalMinutes === 1 ? "minute" : "minutes"} of memories
             </p>
           </div>
 
@@ -62,12 +132,12 @@ export default function LibraryPage() {
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 Filters
               </Button>
-              <div className="hidden sm:flex border border-border rounded-lg">
+              <div className="hidden sm:flex border border-border rounded-lg overflow-hidden">
                 <Button
                   variant={viewMode === "grid" ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setViewMode("grid")}
-                  className="rounded-r-none"
+                  className="rounded-none border-0 border-r border-border last:border-r-0"
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </Button>
@@ -75,19 +145,64 @@ export default function LibraryPage() {
                   variant={viewMode === "list" ? "secondary" : "ghost"}
                   size="icon"
                   onClick={() => setViewMode("list")}
-                  className="rounded-l-none"
+                  className="rounded-none border-0"
                 >
                   <List className="w-4 h-4" />
                 </Button>
               </div>
             </div>
-
-            {/* Emotion filter */}
-            <EmotionFilter selected={selectedEmotion} onChange={setSelectedEmotion} counts={emotionCounts} />
           </div>
 
+          {/* Loading state */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+              <p className="text-muted-foreground">Loading your memories...</p>
+            </div>
+          )}
+
+          {/* Error state */}
+          {error && !loading && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <p className="text-destructive mb-4">{error}</p>
+              <Button onClick={() => window.location.reload()}>Try Again</Button>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && !error && videos.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-20">
+              <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mb-6">
+                <Upload className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h3
+                className="text-xl font-semibold text-foreground mb-2"
+                style={{ fontFamily: "var(--font-space-grotesk)" }}
+              >
+                No videos yet
+              </h3>
+              <p className="text-muted-foreground mb-6 text-center max-w-md">
+                Upload your first video to start building your memory library
+              </p>
+              <Link href="/upload">
+                <Button className="bg-primary hover:bg-primary/90">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Videos
+                </Button>
+              </Link>
+            </div>
+          )}
+
           {/* Video grid */}
-          <VideoGrid videos={mockVideos} selectedEmotion={selectedEmotion} />
+          {!loading && !error && videos.length > 0 && (
+            <VideoGrid
+              videos={filteredVideos}
+              viewMode={viewMode}
+              onVideoDeleted={(videoId) => {
+                setVideos((prev) => prev.filter((v) => v.id !== videoId))
+              }}
+            />
+          )}
         </div>
       </main>
       <Footer />

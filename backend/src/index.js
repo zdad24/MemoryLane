@@ -9,6 +9,11 @@ const express = require('express');
 const cors = require('cors');
 const { errorHandler, NotFoundError } = require('./utils/errors');
 
+// Initialize services
+require('./config/firebase');
+require('./config/twelvelabs');
+require('./services/gemini.service');
+
 // Import routes
 const videosRouter = require('./routes/videos');
 const searchRouter = require('./routes/search');

@@ -1,29 +1,102 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Share2, ChevronRight, SkipForward, Clock } from "lucide-react"
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Share2, SkipForward, Clock, Calendar, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
-import { type VideoMetadata, emotionColors, mockMoments } from "@/lib/mock-data"
+import { type Video, api } from "@/lib/api"
+import { type VideoMetadata } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
-interface VideoPlayerModalProps {
-  video: VideoMetadata
-  startTime?: number
-  onClose: () => void
+// Support both real Video and mock VideoMetadata types
+type VideoInput = Video | VideoMetadata
+
+// Type guard to check if the video is a real Video (has storageUrl)
+function isRealVideo(video: VideoInput): video is Video {
+  return 'storageUrl' in video && typeof video.storageUrl === 'string'
 }
 
-export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerModalProps) {
+interface VideoPlayerModalProps {
+  video: VideoInput
+  startTime?: number
+  onClose: () => void
+  onDelete?: (videoId: string) => void
+}
+
+// Format duration from seconds to mm:ss
+function formatDuration(seconds?: number): string {
+  if (!seconds) return "0:00"
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, "0")}`
+}
+
+// Format date to readable string
+function formatDate(date: string | Date): string {
+  const d = new Date(date)
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
+
+// Get status badge style
+function getStatusBadge(status: string) {
+  switch (status) {
+    case "completed":
+      return { bg: "bg-green-500/20", text: "text-green-400" }
+    case "indexing":
+      return { bg: "bg-yellow-500/20", text: "text-yellow-400" }
+    case "pending":
+      return { bg: "bg-blue-500/20", text: "text-blue-400" }
+    case "failed":
+      return { bg: "bg-red-500/20", text: "text-red-400" }
+    default:
+      return { bg: "bg-secondary", text: "text-secondary-foreground" }
+  }
+}
+
+export function VideoPlayerModal({ video, startTime = 0, onClose, onDelete }: VideoPlayerModalProps) {
+  const isReal = isRealVideo(video)
+
+  // Extract properties based on video type
+  const videoUrl = isReal ? video.storageUrl : video.thumbnail
+  const videoTitle = isReal ? (video.originalName || video.fileName) : video.title
+  const videoDuration = isReal ? (video.duration || 0) : video.durationSeconds
+  const videoDate = isReal ? video.uploadedAt : video.date
+  const videoSummary = video.summary
+  const videoTranscript = isReal ? video.transcript : undefined
+  const videoFileSize = isReal ? video.fileSize : 0
+  const indexingStatus = isReal ? video.indexingStatus : 'completed'
+
   const [isPlaying, setIsPlaying] = useState(false)
   const [currentTime, setCurrentTime] = useState(startTime)
+  const [duration, setDuration] = useState(videoDuration)
   const [isMuted, setIsMuted] = useState(false)
   const [volume, setVolume] = useState(80)
   const [showControls, setShowControls] = useState(true)
+  const [isDeleting, setIsDeleting] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
-  const relatedMoments = mockMoments.filter((m) => m.videoId === video.id)
-  const colors = emotionColors[video.emotion]
+  const statusBadge = getStatusBadge(indexingStatus)
+
+  // Sync video element with state
+  useEffect(() => {
+    const videoEl = videoRef.current
+    if (!videoEl) return
+
+    if (isPlaying) {
+      videoEl.play().catch(() => setIsPlaying(false))
+    } else {
+      videoEl.pause()
+    }
+  }, [isPlaying])
+
+  useEffect(() => {
+    const videoEl = videoRef.current
+    if (!videoEl) return
+
+    videoEl.volume = volume / 100
+    videoEl.muted = isMuted
+  }, [volume, isMuted])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -37,10 +110,27 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [onClose, isPlaying])
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = Math.floor(seconds % 60)
-    return `${mins}:${secs.toString().padStart(2, "0")}`
+  const handleTimeUpdate = () => {
+    if (videoRef.current) {
+      setCurrentTime(videoRef.current.currentTime)
+    }
+  }
+
+  const handleLoadedMetadata = () => {
+    if (videoRef.current) {
+      setDuration(videoRef.current.duration)
+      if (startTime > 0) {
+        videoRef.current.currentTime = startTime
+      }
+    }
+  }
+
+  const handleSeek = (value: number[]) => {
+    const newTime = (value[0] / 100) * duration
+    setCurrentTime(newTime)
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime
+    }
   }
 
   const handleMouseMove = () => {
@@ -53,7 +143,23 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
     }, 3000)
   }
 
-  const progress = (currentTime / video.durationSeconds) * 100
+  const handleDelete = async () => {
+    if (!confirm("Are you sure you want to delete this video?")) return
+
+    setIsDeleting(true)
+    try {
+      await api.deleteVideo(video.id)
+      onDelete?.(video.id)
+      onClose()
+    } catch (error) {
+      console.error("Failed to delete video:", error)
+      alert("Failed to delete video")
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const progress = duration > 0 ? (currentTime / duration) * 100 : 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
@@ -70,52 +176,38 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
           {/* Close button */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white 
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-black/50 text-white
               hover:bg-black/70 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
 
           {/* Video */}
-          <div className="relative aspect-video">
-            <img src={video.thumbnail || "/placeholder.svg"} alt={video.title} className="w-full h-full object-cover" />
+          <div className="relative aspect-video bg-black">
+            <video
+              ref={videoRef}
+              src={videoUrl}
+              className="w-full h-full object-contain"
+              onTimeUpdate={handleTimeUpdate}
+              onLoadedMetadata={handleLoadedMetadata}
+              onEnded={() => setIsPlaying(false)}
+              onClick={() => setIsPlaying(!isPlaying)}
+            />
 
             {/* Play/Pause overlay */}
-            <button
-              onClick={() => setIsPlaying(!isPlaying)}
-              className={cn(
-                "absolute inset-0 flex items-center justify-center transition-opacity",
-                showControls ? "opacity-100" : "opacity-0",
-              )}
-            >
-              <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors">
-                {isPlaying ? (
-                  <Pause className="w-10 h-10 text-white" />
-                ) : (
-                  <Play className="w-10 h-10 text-white ml-1" />
+            {!isPlaying && (
+              <button
+                onClick={() => setIsPlaying(true)}
+                className={cn(
+                  "absolute inset-0 flex items-center justify-center transition-opacity",
+                  showControls ? "opacity-100" : "opacity-0",
                 )}
-              </div>
-            </button>
-
-            {/* Timeline markers for moments */}
-            <div className="absolute bottom-16 left-0 right-0 h-1 mx-4">
-              {relatedMoments.map((moment) => {
-                const position = (moment.startTime / video.durationSeconds) * 100
-                const momentColors = emotionColors[moment.emotion]
-                return (
-                  <button
-                    key={moment.id}
-                    className={cn(
-                      "absolute top-0 w-3 h-3 rounded-full -translate-x-1/2 -translate-y-1",
-                      momentColors.bg,
-                    )}
-                    style={{ left: `${position}%` }}
-                    onClick={() => setCurrentTime(moment.startTime)}
-                    title={moment.description}
-                  />
-                )
-              })}
-            </div>
+              >
+                <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center hover:bg-white/30 transition-colors">
+                  <Play className="w-10 h-10 text-white ml-1" />
+                </div>
+              </button>
+            )}
 
             {/* Controls */}
             <div
@@ -129,7 +221,7 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
                 value={[progress]}
                 max={100}
                 step={0.1}
-                onValueChange={([value]) => setCurrentTime((value / 100) * video.durationSeconds)}
+                onValueChange={handleSeek}
                 className="mb-4"
               />
 
@@ -149,7 +241,11 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
                     variant="ghost"
                     size="sm"
                     className="text-white hover:bg-white/20"
-                    onClick={() => setCurrentTime(Math.min(currentTime + 10, video.durationSeconds))}
+                    onClick={() => {
+                      const newTime = Math.min(currentTime + 10, duration)
+                      setCurrentTime(newTime)
+                      if (videoRef.current) videoRef.current.currentTime = newTime
+                    }}
                   >
                     <SkipForward className="w-5 h-5" />
                   </Button>
@@ -175,7 +271,7 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
                   </div>
 
                   <span className="text-white text-sm font-mono">
-                    {formatTime(currentTime)} / {video.duration}
+                    {formatDuration(currentTime)} / {formatDuration(duration)}
                   </span>
                 </div>
 
@@ -183,7 +279,12 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
                   <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
                     <Share2 className="w-5 h-5" />
                   </Button>
-                  <Button variant="ghost" size="sm" className="text-white hover:bg-white/20">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-white hover:bg-white/20"
+                    onClick={() => videoRef.current?.requestFullscreen()}
+                  >
                     <Maximize className="w-5 h-5" />
                   </Button>
                 </div>
@@ -201,66 +302,61 @@ export function VideoPlayerModal({ video, startTime = 0, onClose }: VideoPlayerM
                 className="font-semibold text-foreground text-lg line-clamp-2"
                 style={{ fontFamily: "var(--font-space-grotesk)" }}
               >
-                {video.title}
+                {videoTitle}
               </h2>
-              <span className={cn("px-2 py-1 rounded-full text-xs font-semibold capitalize", colors.bg, colors.text)}>
-                {video.emotion}
+              <span className={cn("px-2 py-1 rounded-full text-xs font-semibold capitalize", statusBadge.bg, statusBadge.text)}>
+                {indexingStatus}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">{video.summary}</p>
+            <p className="text-sm text-muted-foreground mb-3">
+              {videoSummary || "Video is being processed..."}
+            </p>
             <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
-                {video.duration}
+                {formatDuration(duration)}
               </span>
-              <span>{video.date}</span>
+              <span className="flex items-center gap-1">
+                <Calendar className="w-3 h-3" />
+                {formatDate(videoDate)}
+              </span>
             </div>
           </div>
 
-          {/* Related moments */}
+          {/* Transcript section */}
           <div className="flex-1 overflow-y-auto p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-3">Key Moments</h3>
-            <div className="space-y-2">
-              {relatedMoments.length > 0 ? (
-                relatedMoments.map((moment) => {
-                  const momentColors = emotionColors[moment.emotion]
-                  return (
-                    <button
-                      key={moment.id}
-                      onClick={() => setCurrentTime(moment.startTime)}
-                      className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-secondary transition-colors text-left"
-                    >
-                      <div className="relative w-16 h-10 rounded overflow-hidden flex-shrink-0">
-                        <img
-                          src={moment.thumbnail || "/placeholder.svg"}
-                          alt=""
-                          className="w-full h-full object-cover"
-                        />
-                        <div className={cn("absolute bottom-0 left-0 right-0 h-0.5", momentColors.bg)} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-foreground truncate">{moment.description}</p>
-                        <span className="text-xs text-muted-foreground font-mono">{formatTime(moment.startTime)}</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                    </button>
-                  )
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">No key moments detected yet.</p>
-              )}
-            </div>
+            <h3 className="text-sm font-semibold text-foreground mb-3">Transcript</h3>
+            {videoTranscript ? (
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap">{videoTranscript}</p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {indexingStatus === "completed"
+                  ? "No transcript available."
+                  : "Transcript will be available after processing."}
+              </p>
+            )}
           </div>
 
-          {/* Tags */}
+          {/* Actions */}
           <div className="p-4 border-t border-border">
-            <h3 className="text-sm font-semibold text-foreground mb-2">Tags</h3>
-            <div className="flex flex-wrap gap-2">
-              {video.tags.map((tag) => (
-                <span key={tag} className="px-2 py-1 rounded-full text-xs bg-secondary text-secondary-foreground">
-                  {tag}
-                </span>
-              ))}
+            <div className="flex items-center justify-between">
+              {videoFileSize > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  {(videoFileSize / (1024 * 1024)).toFixed(1)} MB
+                </div>
+              )}
+              {isReal && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10 ml-auto"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </Button>
+              )}
             </div>
           </div>
         </div>

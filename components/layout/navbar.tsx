@@ -56,7 +56,7 @@ export function Navbar() {
           <div className="hidden md:block">
             <Link href="/upload">
               <Button size="sm" className="bg-foreground text-background hover:bg-foreground/90">
-                Get Started
+                Upload
               </Button>
             </Link>
           </div>
@@ -80,7 +80,7 @@ export function Navbar() {
               ))}
               <Link href="/upload" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full bg-foreground text-background hover:bg-foreground/90 mt-2">
-                  Get Started
+                  Upload
                 </Button>
               </Link>
             </div>

@@ -3,10 +3,12 @@
 import type React from "react"
 
 import { useState, useCallback, useRef } from "react"
-import { Upload, X, CheckCircle2, FileVideo, AlertCircle } from "lucide-react"
+import { Upload, X, CheckCircle2, FileVideo, AlertCircle, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
+import { api } from "@/lib/api"
+import { useRouter } from "next/navigation"
 
 interface UploadFile {
   id: string
@@ -15,12 +17,14 @@ interface UploadFile {
   status: "uploading" | "processing" | "complete" | "error"
   thumbnail?: string
   error?: string
+  videoId?: string
 }
 
 export function UploadZone() {
   const [isDragging, setIsDragging] = useState(false)
   const [files, setFiles] = useState<UploadFile[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const router = useRouter()
 
   const handleDragEnter = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -39,29 +43,65 @@ export function UploadZone() {
     e.stopPropagation()
   }, [])
 
-  const simulateUpload = (fileId: string) => {
-    let progress = 0
-    const interval = setInterval(() => {
-      progress += Math.random() * 15
-      if (progress >= 100) {
-        progress = 100
-        clearInterval(interval)
+  const uploadFile = async (uploadFile: UploadFile) => {
+    try {
+      // Update progress periodically during upload
+      const progressInterval = setInterval(() => {
         setFiles((prev) =>
-          prev.map((f) => (f.id === fileId ? { ...f, progress: 100, status: "processing" as const } : f)),
+          prev.map((f) =>
+            f.id === uploadFile.id && f.status === "uploading"
+              ? { ...f, progress: Math.min(f.progress + 10, 90) }
+              : f
+          )
         )
-        // Simulate processing
-        setTimeout(() => {
-          setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, status: "complete" as const } : f)))
-        }, 2000)
-      } else {
-        setFiles((prev) => prev.map((f) => (f.id === fileId ? { ...f, progress } : f)))
+      }, 300)
+
+      // Upload to API
+      const response = await api.uploadVideo(uploadFile.file)
+
+      clearInterval(progressInterval)
+
+      // Update to processing state
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === uploadFile.id
+            ? { ...f, progress: 100, status: "processing" as const, videoId: response.videoId }
+            : f
+        )
+      )
+
+      // Optionally trigger indexing
+      try {
+        await api.indexVideo(response.videoId)
+      } catch (indexError) {
+        console.log("Indexing will be done later:", indexError)
       }
-    }, 200)
+
+      // Mark as complete
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === uploadFile.id ? { ...f, status: "complete" as const } : f
+        )
+      )
+    } catch (error) {
+      console.error("Upload error:", error)
+      setFiles((prev) =>
+        prev.map((f) =>
+          f.id === uploadFile.id
+            ? {
+                ...f,
+                status: "error" as const,
+                error: error instanceof Error ? error.message : "Upload failed",
+              }
+            : f
+        )
+      )
+    }
   }
 
   const processFiles = (fileList: FileList | File[]) => {
     const newFiles: UploadFile[] = Array.from(fileList)
-      .filter((file) => file.type.startsWith("video/"))
+      .filter((file) => file.type.startsWith("video/") || file.name.match(/\.(mp4|mov|avi|mkv|webm)$/i))
       .map((file) => ({
         id: Math.random().toString(36).substr(2, 9),
         file,
@@ -71,9 +111,9 @@ export function UploadZone() {
 
     setFiles((prev) => [...prev, ...newFiles])
 
-    // Simulate upload for each file
+    // Upload each file
     newFiles.forEach((file) => {
-      simulateUpload(file.id)
+      uploadFile(file)
     })
   }
 
@@ -103,6 +143,9 @@ export function UploadZone() {
     }
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
+
+  const completedCount = files.filter((f) => f.status === "complete").length
+  const allComplete = files.length > 0 && completedCount === files.length
 
   return (
     <div className="w-full max-w-3xl mx-auto">
@@ -145,13 +188,13 @@ export function UploadZone() {
             {isDragging ? "Drop your videos here" : "Drag & drop videos or click to browse"}
           </h3>
           <p className="text-muted-foreground mb-4">Supported formats: MP4, MOV, AVI, MKV, WebM</p>
-          <p className="text-sm text-muted-foreground">Maximum file size: 2GB per video</p>
+          <p className="text-sm text-muted-foreground">Maximum file size: 500MB per video</p>
         </div>
 
         <input
           ref={fileInputRef}
           type="file"
-          accept="video/*"
+          accept="video/*,.mp4,.mov,.avi,.mkv,.webm"
           multiple
           onChange={handleFileSelect}
           className="hidden"
@@ -162,7 +205,7 @@ export function UploadZone() {
       {files.length > 0 && (
         <div className="mt-8 space-y-4">
           <h4 className="text-lg font-semibold text-foreground" style={{ fontFamily: "var(--font-space-grotesk)" }}>
-            Uploading {files.length} {files.length === 1 ? "video" : "videos"}
+            {allComplete ? "Upload Complete!" : `Uploading ${files.length} ${files.length === 1 ? "video" : "videos"}`}
           </h4>
 
           <div className="space-y-3">
@@ -200,14 +243,14 @@ export function UploadZone() {
                     <span className="flex items-center gap-1">
                       {file.status === "uploading" && (
                         <>
-                          <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                          <Loader2 className="w-3 h-3 animate-spin" />
                           Uploading {Math.round(file.progress)}%
                         </>
                       )}
                       {file.status === "processing" && (
                         <>
                           <span className="w-2 h-2 rounded-full bg-[#FFD93D] animate-pulse" />
-                          Processing with AI...
+                          Processing...
                         </>
                       )}
                       {file.status === "complete" && (
@@ -235,15 +278,22 @@ export function UploadZone() {
           {/* Summary */}
           <div className="flex items-center justify-between pt-4 border-t border-border">
             <div className="text-sm text-muted-foreground">
-              {files.filter((f) => f.status === "complete").length} of {files.length} complete
+              {completedCount} of {files.length} complete
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setFiles([])}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Clear all
-            </Button>
+            <div className="flex gap-2">
+              {allComplete && (
+                <Button onClick={() => router.push("/library")} className="bg-primary hover:bg-primary/90">
+                  View Library
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setFiles([])}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                Clear all
+              </Button>
+            </div>
           </div>
         </div>
       )}

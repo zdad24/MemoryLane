@@ -3,36 +3,53 @@
 import { useState } from "react"
 import { VideoCard } from "./video-card"
 import { VideoPlayerModal } from "./video-player-modal"
-import { type VideoMetadata, mockVideos, type EmotionType } from "@/lib/mock-data"
+import { type Video } from "@/lib/api"
 
 interface VideoGridProps {
-  videos?: VideoMetadata[]
-  selectedEmotion?: EmotionType | "all"
+  videos: Video[]
+  viewMode?: "grid" | "list"
+  onVideoDeleted?: (videoId: string) => void
 }
 
-export function VideoGrid({ videos = mockVideos, selectedEmotion = "all" }: VideoGridProps) {
-  const [selectedVideo, setSelectedVideo] = useState<VideoMetadata | null>(null)
+export function VideoGrid({ videos, viewMode = "grid", onVideoDeleted }: VideoGridProps) {
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
 
-  const filteredVideos =
-    selectedEmotion === "all" ? videos : videos.filter((video) => video.emotion === selectedEmotion)
+  const handleDelete = (videoId: string) => {
+    setSelectedVideo(null)
+    onVideoDeleted?.(videoId)
+  }
 
   return (
     <>
-      {filteredVideos.length === 0 ? (
+      {videos.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-muted-foreground">No videos found for this filter.</p>
+          <p className="text-muted-foreground">No videos found.</p>
+        </div>
+      ) : viewMode === "grid" ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {videos.map((video, index) => (
+            <div key={video.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
+              <VideoCard video={video} onClick={setSelectedVideo} viewMode="grid" />
+            </div>
+          ))}
         </div>
       ) : (
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVideos.map((video, index) => (
+        <div className="space-y-4">
+          {videos.map((video, index) => (
             <div key={video.id} className="animate-slide-up" style={{ animationDelay: `${index * 50}ms` }}>
-              <VideoCard video={video} onClick={setSelectedVideo} />
+              <VideoCard video={video} onClick={setSelectedVideo} viewMode="list" />
             </div>
           ))}
         </div>
       )}
 
-      {selectedVideo && <VideoPlayerModal video={selectedVideo} onClose={() => setSelectedVideo(null)} />}
+      {selectedVideo && (
+        <VideoPlayerModal
+          video={selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+          onDelete={handleDelete}
+        />
+      )}
     </>
   )
 }

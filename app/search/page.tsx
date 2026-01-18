@@ -6,12 +6,12 @@ import { Footer } from "@/components/layout/footer"
 import { SearchBar } from "@/components/search/search-bar"
 import { SearchResults } from "@/components/search/search-results"
 import { SearchHistory } from "@/components/search/search-history"
-import { mockVideos, mockMoments, type VideoMetadata, type Moment } from "@/lib/mock-data"
+import { api, type SearchResult as ApiSearchResult, type Video, type SearchClip } from "@/lib/api"
 
 interface SearchResult {
-  video: VideoMetadata
+  video: Video
   relevanceScore: number
-  matchingMoments: Moment[]
+  clips: SearchClip[]
 }
 
 export default function SearchPage() {
@@ -20,6 +20,7 @@ export default function SearchPage() {
   const [results, setResults] = useState<SearchResult[]>([])
   const [hasSearched, setHasSearched] = useState(false)
   const [searchHistory, setSearchHistory] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
 
   // Load search history from localStorage
   useEffect(() => {
@@ -35,38 +36,36 @@ export default function SearchPage() {
     localStorage.setItem("searchHistory", JSON.stringify(updated))
   }
 
-  const handleSearch = (searchQuery: string) => {
+  const handleSearch = async (searchQuery: string) => {
     setQuery(searchQuery)
     setIsLoading(true)
     setHasSearched(true)
+    setError(null)
 
-    // Simulate API call
-    setTimeout(() => {
-      // Mock search - filter videos by tags, title, or summary
-      const filtered = mockVideos.filter((video) => {
-        const searchLower = searchQuery.toLowerCase()
-        return (
-          video.title.toLowerCase().includes(searchLower) ||
-          video.summary.toLowerCase().includes(searchLower) ||
-          video.tags.some((tag) => tag.toLowerCase().includes(searchLower)) ||
-          video.emotion.toLowerCase().includes(searchLower)
-        )
-      })
+    try {
+      const response = await api.search(searchQuery)
 
-      // Create search results with relevance scores
-      const searchResults: SearchResult[] = filtered.map((video) => ({
-        video,
-        relevanceScore: 0.7 + Math.random() * 0.3,
-        matchingMoments: mockMoments.filter((m) => m.videoId === video.id),
-      }))
+      // Map API response to component's expected format
+      const searchResults: SearchResult[] = response.results
+        .filter((result) => result.video !== null)
+        .map((result) => ({
+          video: result.video as Video,
+          relevanceScore: result.score,
+          clips: result.clips,
+        }))
 
       // Sort by relevance
       searchResults.sort((a, b) => b.relevanceScore - a.relevanceScore)
 
       setResults(searchResults)
-      setIsLoading(false)
       saveToHistory(searchQuery)
-    }, 1500)
+    } catch (err) {
+      console.error("Search error:", err)
+      setError(err instanceof Error ? err.message : "Search failed. Please try again.")
+      setResults([])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const clearHistory = () => {
@@ -103,9 +102,14 @@ export default function SearchPage() {
 
           {/* Results or history */}
           <div className="mt-12">
-            {hasSearched ? (
+            {error && (
+              <div className="text-center py-8 mb-8 bg-destructive/10 border border-destructive/20 rounded-xl">
+                <p className="text-destructive">{error}</p>
+              </div>
+            )}
+            {hasSearched && !error ? (
               <SearchResults results={results} query={query} />
-            ) : (
+            ) : !error && (
               <SearchHistory
                 history={searchHistory}
                 onSelect={handleSearch}

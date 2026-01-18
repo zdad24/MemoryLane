@@ -1,39 +1,18 @@
-/**
- * Gemini AI Service
- * Handles chat and text generation via Google Gemini API
- */
-
+require('dotenv').config();
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-let genAI = null;
-let model = null;
+// Check for API key
+if (!process.env.GEMINI_API_KEY) {
+  console.error('❌ GEMINI_API_KEY not found in .env');
+  console.error('   Get your API key from: https://aistudio.google.com/apikey');
+  process.exit(1);
+}
 
-/**
- * Initialize Gemini AI client
- * @returns {Object} Gemini model instance
- */
-const initializeGemini = () => {
-  if (model) {
-    return model;
-  }
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
-  const apiKey = process.env.GEMINI_API_KEY;
-
-  if (!apiKey) {
-    console.warn('[Gemini] API key not configured');
-    return null;
-  }
-
-  try {
-    genAI = new GoogleGenerativeAI(apiKey);
-    model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
-    console.log('[Gemini] Client initialized');
-    return model;
-  } catch (error) {
-    console.error('[Gemini] Initialization error:', error.message);
-    throw error;
-  }
-};
+// Test connection (skip actual API call to avoid rate limits)
+console.log('✅ Gemini configured (model: gemini-2.5-flash)');
 
 /**
  * Generate a chat response
@@ -42,45 +21,33 @@ const initializeGemini = () => {
  * @param {Object} context - Additional context (e.g., video search results)
  * @returns {Promise<string>} Generated response
  */
-const generateChatResponse = async (message, history = [], context = {}) => {
-  const geminiModel = initializeGemini();
+async function generateChatResponse(message, history = [], context = {}) {
+  const chat = model.startChat({
+    history: history.map(msg => ({
+      role: msg.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: msg.content }],
+    })),
+  });
 
-  if (!geminiModel) {
-    throw new Error('Gemini client not initialized');
+  // Build prompt with context
+  let prompt = message;
+  if (context.videoResults) {
+    prompt = `Based on these video search results:\n${JSON.stringify(context.videoResults)}\n\nUser question: ${message}`;
   }
 
-  // TODO: Implement chat response generation with context
-  // const chat = geminiModel.startChat({
-  //   history: history.map(msg => ({
-  //     role: msg.role,
-  //     parts: [{ text: msg.content }],
-  //   })),
-  // });
-  //
-  // const result = await chat.sendMessage(message);
-  // return result.response.text();
-
-  throw new Error('Not implemented');
-};
+  const result = await chat.sendMessage(prompt);
+  return result.response.text();
+}
 
 /**
  * Generate text based on a prompt
  * @param {string} prompt - Text prompt
  * @returns {Promise<string>} Generated text
  */
-const generateText = async (prompt) => {
-  const geminiModel = initializeGemini();
-
-  if (!geminiModel) {
-    throw new Error('Gemini client not initialized');
-  }
-
-  // TODO: Implement text generation
-  // const result = await geminiModel.generateContent(prompt);
-  // return result.response.text();
-
-  throw new Error('Not implemented');
-};
+async function generateText(prompt) {
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
 
 /**
  * Summarize video content based on search results
@@ -88,37 +55,46 @@ const generateText = async (prompt) => {
  * @param {string} query - Original user query
  * @returns {Promise<string>} Summary
  */
-const summarizeVideoContent = async (searchResults, query) => {
-  const geminiModel = initializeGemini();
-
-  if (!geminiModel) {
-    throw new Error('Gemini client not initialized');
-  }
-
-  // TODO: Implement video content summarization
-  throw new Error('Not implemented');
-};
+async function summarizeVideoContent(searchResults, query) {
+  const prompt = `Based on these video search results for the query "${query}":\n${JSON.stringify(searchResults)}\n\nProvide a helpful summary of what was found in the videos.`;
+  const result = await model.generateContent(prompt);
+  return result.response.text();
+}
 
 /**
  * Generate timeline narrative from video data
  * @param {Array} videos - Array of video metadata
  * @returns {Promise<Object>} Timeline narrative data
  */
-const generateTimelineNarrative = async (videos) => {
-  const geminiModel = initializeGemini();
+async function generateTimelineNarrative(videos) {
+  const prompt = `Given these videos and their dates:\n${JSON.stringify(videos)}\n\nCreate a brief narrative describing the memories and moments captured.`;
+  const result = await model.generateContent(prompt);
+  return { narrative: result.response.text() };
+}
 
-  if (!geminiModel) {
-    throw new Error('Gemini client not initialized');
+/**
+ * Generate a summary for a video based on its transcript
+ * @param {string} text - Video transcript text
+ * @returns {Promise<string>} Generated summary
+ */
+async function generateSummary(text) {
+  try {
+    const truncatedText = (text || '').slice(0, 2000);
+    const prompt = `Summarize this video transcript in 2-3 sentences, focusing on key moments and emotions:\n\n${truncatedText}`;
+
+    const result = await model.generateContent(prompt);
+    return result.response.text();
+  } catch (error) {
+    console.error('[Gemini] Summary generation error:', error.message);
+    return 'Unable to generate summary at this time.';
   }
-
-  // TODO: Implement timeline narrative generation
-  throw new Error('Not implemented');
-};
+}
 
 module.exports = {
-  initializeGemini,
+  model,
   generateChatResponse,
   generateText,
   summarizeVideoContent,
   generateTimelineNarrative,
+  generateSummary,
 };

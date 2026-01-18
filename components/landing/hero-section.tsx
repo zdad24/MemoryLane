@@ -57,7 +57,7 @@ export function HeroSection() {
               className="bg-foreground text-background hover:bg-foreground/90 px-8 h-12 text-base 
                 hover:scale-105 transition-transform group"
             >
-              Start Uploading
+              Get Started
               <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
             </Button>
           </Link>

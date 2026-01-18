@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm dev)",
+      "Bash(timeout:*)",
+      "Bash(npm install)",
+      "Bash(node src/index.js:*)",
+      "Bash(curl:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: add Node.js Express backend API structure\n\n- Set up Express server with CORS and JSON parsing\n- Add Firebase Admin SDK and TwelveLabs client configuration\n- Create route placeholders for videos, search, timeline, and chat\n- Add Gemini AI and TwelveLabs service files\n- Include error handling utilities and middleware\n- Add README with setup instructions and API documentation\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(findstr:*)",
+      "Bash(node -e:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx kill-port:*)",
+      "Bash(python3:*)",
+      "Bash(git log:*)"
+    ]
+  }
+}
