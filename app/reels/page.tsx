@@ -1,14 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
 import { ReelConfig, type ReelConfiguration } from "@/components/reels/reel-config"
 import { GenerationProgress } from "@/components/reels/generation-progress"
 import { ReelCard } from "@/components/reels/reel-card"
 import { ReelPreviewModal } from "@/components/reels/reel-preview-modal"
-import { mockReels, type HighlightReel } from "@/lib/reel-data"
-import { mockVideos } from "@/lib/mock-data"
+import { type HighlightReel } from "@/lib/reel-data"
+import { api, type Video } from "@/lib/api"
 import { Plus, Wand2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -16,9 +16,23 @@ type ViewMode = "list" | "create" | "generating"
 
 export default function ReelsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list")
-  const [reels, setReels] = useState<HighlightReel[]>(mockReels)
+  const [reels, setReels] = useState<HighlightReel[]>([])
   const [selectedReel, setSelectedReel] = useState<HighlightReel | null>(null)
   const [pendingConfig, setPendingConfig] = useState<ReelConfiguration | null>(null)
+  const [videos, setVideos] = useState<Video[]>([])
+
+  useEffect(() => {
+    // Fetch videos for reel generation
+    const fetchVideos = async () => {
+      try {
+        const response = await api.getVideos()
+        setVideos(response.videos)
+      } catch (error) {
+        console.error("Failed to fetch videos:", error)
+      }
+    }
+    fetchVideos()
+  }, [])
 
   const handleGenerate = (config: ReelConfiguration) => {
     setPendingConfig(config)
@@ -27,6 +41,13 @@ export default function ReelsPage() {
 
   const handleGenerationComplete = () => {
     if (pendingConfig) {
+      // Filter videos that match selected emotions
+      const matchingVideos = videos.filter((v) => {
+        if (pendingConfig.emotions.length === 0) return true
+        const videoTags = v.emotionTags || []
+        return pendingConfig.emotions.some((e) => videoTags.includes(e))
+      })
+
       // Create new reel from config
       const newReel: HighlightReel = {
         id: (reels.length + 1).toString(),
@@ -34,13 +55,10 @@ export default function ReelsPage() {
         duration: `${Math.floor(pendingConfig.duration / 60)}:${(pendingConfig.duration % 60).toString().padStart(2, "0")}`,
         durationSeconds: pendingConfig.duration,
         emotions: pendingConfig.emotions,
-        videoCount: mockVideos.filter(
-          (v) => pendingConfig.emotions.length === 0 || pendingConfig.emotions.includes(v.emotion),
-        ).length,
-        thumbnails: mockVideos
-          .filter((v) => pendingConfig.emotions.length === 0 || pendingConfig.emotions.includes(v.emotion))
+        videoCount: matchingVideos.length,
+        thumbnails: matchingVideos
           .slice(0, 3)
-          .map((v) => v.thumbnail),
+          .map((v) => v.storageUrl),
         createdAt: new Date(),
         status: "completed",
       }

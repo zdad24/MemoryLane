@@ -1,29 +1,17 @@
 "use client"
 
-import { Film, Clock, Smile, Calendar } from "lucide-react"
-import type { TimelineDataPoint, TimelineSummary, EmotionType } from "@/lib/api"
-
-const emotionColors: Record<EmotionType, { bg: string; text: string }> = {
-  joy: { bg: "bg-[#FFD93D]", text: "text-[#FFD93D]" },
-  love: { bg: "bg-[#FF6B6B]", text: "text-[#FF6B6B]" },
-  excitement: { bg: "bg-[#C44DFF]", text: "text-[#C44DFF]" },
-  calm: { bg: "bg-[#4DFFDB]", text: "text-[#4DFFDB]" },
-  nostalgia: { bg: "bg-[#FFB066]", text: "text-[#FFB066]" },
-  sadness: { bg: "bg-[#5DA3FA]", text: "text-[#5DA3FA]" },
-}
+import { Film, Clock, Tag, Calendar } from "lucide-react"
+import { getEmotionColor } from "@/lib/mock-data"
+import { type TimelineSummary } from "@/lib/api"
 
 interface TimelineStatsProps {
-  summary: TimelineSummary;
-  dataPoints: TimelineDataPoint[];
+  summary: TimelineSummary
 }
 
-export function TimelineStats({ summary, dataPoints }: TimelineStatsProps) {
-  const totalMinutes = Math.round(summary.totalDuration / 60);
-  const months = dataPoints.length;
-
-  const dominantEmotionColor = summary.dominantEmotion
-    ? emotionColors[summary.dominantEmotion]?.text || "text-primary"
-    : "text-muted";
+export function TimelineStats({ summary }: TimelineStatsProps) {
+  const totalMinutes = Math.round(summary.totalDuration / 60)
+  const topEmotion = summary.topEmotionTags[0] || "none"
+  const colors = getEmotionColor(topEmotion)
 
   const stats = [
     {
@@ -39,17 +27,15 @@ export function TimelineStats({ summary, dataPoints }: TimelineStatsProps) {
       color: "text-[#FFD93D]",
     },
     {
-      icon: Smile,
+      icon: Tag,
       label: "Top Emotion",
-      value: summary.dominantEmotion
-        ? summary.dominantEmotion.charAt(0).toUpperCase() + summary.dominantEmotion.slice(1)
-        : "N/A",
-      color: dominantEmotionColor,
+      value: topEmotion.charAt(0).toUpperCase() + topEmotion.slice(1),
+      color: colors.bg.replace("bg-", "text-"),
     },
     {
       icon: Calendar,
-      label: "Time Span",
-      value: `${months} months`,
+      label: "Total Tags",
+      value: Object.keys(summary.emotionBreakdown).length,
       color: "text-[#6BCB77]",
     },
   ]

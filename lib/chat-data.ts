@@ -1,12 +1,11 @@
-import type { VideoMetadata, EmotionType } from "./mock-data"
+import type { AttachedVideo } from "./api"
 
 export interface ChatMessage {
   id: string
   role: "user" | "assistant"
   content: string
   timestamp: Date
-  attachedVideos?: VideoMetadata[]
-  emotionBreakdown?: Record<EmotionType, number>
+  attachedVideos?: AttachedVideo[]
   isTyping?: boolean
 }
 

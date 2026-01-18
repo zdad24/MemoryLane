@@ -12,7 +12,6 @@ const router = express.Router();
 
 const INDEX_NAME = 'My Index (Default)';
 const MIN_SCORE_THRESHOLD = 50; // Only show results with 50%+ match
-const VALID_EMOTIONS = ['joy', 'love', 'excitement', 'calm', 'nostalgia', 'sadness'];
 
 /**
  * POST /api/search
@@ -139,61 +138,42 @@ router.post(
 
 /**
  * GET /api/search/by-emotion
- * Search videos by dominant emotion
+ * Search videos by emotion tag
  */
 router.get(
   '/by-emotion',
   asyncHandler(async (req, res) => {
-    const { emotion, limit = 20, minConfidence = 0 } = req.query;
+    const { emotion, limit = 20 } = req.query;
 
-    console.log(`[Search] Searching by emotion: "${emotion}"`);
+    console.log(`[Search] Searching by emotion tag: "${emotion}"`);
 
     // Validate emotion parameter
     if (!emotion || typeof emotion !== 'string') {
       throw new ValidationError('Emotion parameter is required');
     }
 
-    const normalizedEmotion = emotion.toLowerCase();
-    if (!VALID_EMOTIONS.includes(normalizedEmotion)) {
-      throw new ValidationError(
-        `Invalid emotion. Valid options: ${VALID_EMOTIONS.join(', ')}`
-      );
-    }
+    const normalizedEmotion = emotion.toLowerCase().trim();
 
     try {
-      // Query Firestore for videos with the specified dominant emotion
-      let query = db
+      // Query Firestore for videos with the specified emotion tag
+      const snapshot = await db
         .collection('videos')
         .where('indexingStatus', '==', 'completed')
-        .where('dominantEmotion', '==', normalizedEmotion);
+        .where('emotionTags', 'array-contains', normalizedEmotion)
+        .limit(parseInt(limit))
+        .get();
 
-      // Get videos
-      const snapshot = await query.get();
-
-      let videos = [];
+      const videos = [];
       snapshot.forEach((doc) => {
         const data = doc.data();
-        // Filter by minimum confidence if specified
-        if (data.emotionConfidence >= parseFloat(minConfidence)) {
-          videos.push({
-            id: doc.id,
-            ...data,
-            uploadedAt: data.uploadedAt?.toDate?.() || data.uploadedAt,
-          });
-        }
+        videos.push({
+          id: doc.id,
+          ...data,
+          uploadedAt: data.uploadedAt?.toDate?.() || data.uploadedAt,
+        });
       });
 
-      // Sort by emotion score for the requested emotion (highest first)
-      videos.sort((a, b) => {
-        const scoreA = a.emotions?.[normalizedEmotion] || 0;
-        const scoreB = b.emotions?.[normalizedEmotion] || 0;
-        return scoreB - scoreA;
-      });
-
-      // Apply limit
-      videos = videos.slice(0, parseInt(limit));
-
-      console.log(`[Search] Found ${videos.length} videos with emotion: "${emotion}"`);
+      console.log(`[Search] Found ${videos.length} videos with emotion tag: "${emotion}"`);
 
       // Save search to Firestore
       await db.collection('searches').add({
@@ -218,12 +198,12 @@ router.get(
 
 /**
  * GET /api/search/emotions
- * Get available emotions and video counts per emotion
+ * Get all unique emotion tags and video counts per tag
  */
 router.get(
   '/emotions',
   asyncHandler(async (req, res) => {
-    console.log('[Search] Getting emotion statistics');
+    console.log('[Search] Getting emotion tag statistics');
 
     try {
       const snapshot = await db
@@ -232,17 +212,25 @@ router.get(
         .get();
 
       const emotionCounts = {};
-      VALID_EMOTIONS.forEach((e) => (emotionCounts[e] = 0));
 
       snapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.dominantEmotion && VALID_EMOTIONS.includes(data.dominantEmotion)) {
-          emotionCounts[data.dominantEmotion]++;
-        }
+        const tags = data.emotionTags || [];
+        tags.forEach((tag) => {
+          if (typeof tag === 'string') {
+            const normalizedTag = tag.toLowerCase().trim();
+            emotionCounts[normalizedTag] = (emotionCounts[normalizedTag] || 0) + 1;
+          }
+        });
       });
 
+      // Sort emotions by count (descending)
+      const sortedEmotions = Object.entries(emotionCounts)
+        .sort((a, b) => b[1] - a[1])
+        .map(([emotion]) => emotion);
+
       res.json({
-        emotions: VALID_EMOTIONS,
+        emotions: sortedEmotions,
         counts: emotionCounts,
         totalVideos: snapshot.size,
       });

@@ -1,12 +1,19 @@
 "use client"
 import { Play, Bot, User } from "lucide-react"
 import type { ChatMessage } from "@/lib/chat-data"
-import { type VideoMetadata, emotionColors } from "@/lib/mock-data"
+import type { AttachedVideo } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface ChatMessageProps {
   message: ChatMessage
-  onVideoClick?: (video: VideoMetadata) => void
+  onVideoClick?: (video: AttachedVideo) => void
+}
+
+function formatDuration(seconds?: number | null) {
+  if (!seconds) return null
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, "0")}`
 }
 
 export function ChatMessageComponent({ message, onVideoClick }: ChatMessageProps) {
@@ -49,7 +56,7 @@ export function ChatMessageComponent({ message, onVideoClick }: ChatMessageProps
         {message.attachedVideos && message.attachedVideos.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-2">
             {message.attachedVideos.map((video) => {
-              const colors = emotionColors[video.emotion]
+              const duration = formatDuration(video.duration)
               return (
                 <button
                   key={video.id}
@@ -59,46 +66,24 @@ export function ChatMessageComponent({ message, onVideoClick }: ChatMessageProps
                 >
                   <div className="relative w-20 h-12 rounded-lg overflow-hidden">
                     <img
-                      src={video.thumbnail || "/placeholder.svg"}
-                      alt={video.title}
+                      src={video.thumbnailUrl || "/placeholder.svg"}
+                      alt={video.originalName || video.summary}
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Play className="w-4 h-4 text-white" />
                     </div>
-                    <div className={cn("absolute bottom-0 left-0 right-0 h-1", colors.bg)} />
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-primary/70" />
                   </div>
                   <div className="text-left">
-                    <p className="text-xs font-medium text-foreground line-clamp-1 max-w-[120px]">{video.title}</p>
-                    <p className="text-xs text-muted-foreground">{video.duration}</p>
+                    <p className="text-xs font-medium text-foreground line-clamp-1 max-w-[120px]">
+                      {video.originalName || video.summary}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{duration || "Video"}</p>
                   </div>
                 </button>
               )
             })}
-          </div>
-        )}
-
-        {/* Emotion breakdown chart */}
-        {message.emotionBreakdown && (
-          <div className="mt-3 p-4 rounded-xl bg-card border border-border">
-            <p className="text-xs text-muted-foreground mb-3">Emotion Breakdown</p>
-            <div className="space-y-2">
-              {Object.entries(message.emotionBreakdown).map(([emotion, value]) => {
-                const colors = emotionColors[emotion as keyof typeof emotionColors]
-                return (
-                  <div key={emotion} className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground w-16 capitalize">{emotion}</span>
-                    <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                      <div
-                        className={cn("h-full rounded-full transition-all duration-500", colors.bg)}
-                        style={{ width: `${value}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground w-8">{value}%</span>
-                  </div>
-                )
-              })}
-            </div>
           </div>
         )}
 

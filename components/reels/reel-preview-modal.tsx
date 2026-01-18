@@ -5,7 +5,7 @@ import { X, Play, Pause, Download, Share2, Volume2, VolumeX } from "lucide-react
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import type { HighlightReel } from "@/lib/reel-data"
-import { emotionColors, type EmotionType } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 interface ReelPreviewModalProps {
@@ -125,7 +125,7 @@ export function ReelPreviewModal({ reel, onClose }: ReelPreviewModalProps) {
           </div>
           <div className="flex gap-2">
             {reel.emotions.map((emotion) => {
-              const colors = emotionColors[emotion as EmotionType]
+              const colors = getEmotionColor(emotion)
               return (
                 <span key={emotion} className={cn("px-3 py-1 rounded-full text-sm capitalize", colors.bg, colors.text)}>
                   {emotion}

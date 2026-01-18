@@ -1,4 +1,14 @@
 require('dotenv').config();
+
+// Ensure fetch is available for Node.js < 18
+if (typeof fetch === 'undefined') {
+  const nodeFetch = require('node-fetch');
+  global.fetch = nodeFetch;
+  global.Headers = nodeFetch.Headers;
+  global.Request = nodeFetch.Request;
+  global.Response = nodeFetch.Response;
+}
+
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Check for API key

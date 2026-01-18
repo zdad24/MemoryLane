@@ -5,15 +5,6 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Types
-export interface EmotionScores {
-  joy: number;
-  love: number;
-  calm: number;
-  excitement: number;
-  nostalgia: number;
-  sadness: number;
-}
-
 export interface Video {
   id: string;
   fileName: string;
@@ -29,10 +20,7 @@ export interface Video {
   summary?: string;
   transcript?: string;
   duration?: number;
-  emotions?: EmotionScores;
-  dominantEmotion?: 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' | 'sadness';
-  emotionConfidence?: number;
-  emotionAnalyzedAt?: string | Date;
+  emotionTags?: string[];
 }
 
 export interface UploadResponse {
@@ -81,14 +69,7 @@ export type EmotionType = 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' |
 
 export interface TimelineDataPoint {
   date: string;
-  month: string;
-  year: number;
-  joy: number;
-  love: number;
-  calm: number;
-  excitement: number;
-  nostalgia: number;
-  sadness: number;
+  emotionTags: Record<string, number>;
   videoCount: number;
   totalDuration: number;
 }
@@ -107,7 +88,7 @@ export interface Milestone {
 export interface TimelineSummary {
   totalVideos: number;
   totalDuration: number;
-  dominantEmotion: EmotionType | null;
+  topEmotionTags: string[];
   emotionBreakdown: Record<string, number>;
 }
 
@@ -128,6 +109,11 @@ export interface AttachedVideo {
   summary: string;
   uploadedAt: string | Date;
   storageUrl: string;
+  originalName?: string;
+  duration?: number | null;
+  thumbnailUrl?: string | null;
+  emotionTags?: string[];
+  intent?: 'search' | 'show_video' | 'followup' | 'generate';
 }
 
 export interface ChatResponse {
@@ -289,15 +275,14 @@ export const api = {
   },
 
   /**
-   * Get videos by emotion
+   * Get videos by emotion tag
    */
   getVideosByEmotion: async (
-    emotion: 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' | 'sadness',
-    options?: { limit?: number; minConfidence?: number }
+    emotion: string,
+    options?: { limit?: number }
   ): Promise<{ emotion: string; results: Video[]; total: number }> => {
     const params = new URLSearchParams({ emotion });
     if (options?.limit) params.append('limit', String(options.limit));
-    if (options?.minConfidence) params.append('minConfidence', String(options.minConfidence));
     return fetchApi(`/api/search/by-emotion?${params.toString()}`);
   },
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Loader2 } from "lucide-react"
 import { Navbar } from "@/components/layout/navbar"
 import { Footer } from "@/components/layout/footer"
@@ -11,17 +11,24 @@ import { TimelineStats } from "@/components/timeline/timeline-stats"
 import { EmptyTimelineState } from "@/components/timeline/empty-timeline"
 import { VideoPlayerModal } from "@/components/library/video-player-modal"
 import { milestoneIcons, type Milestone } from "@/lib/timeline-data"
-import { type EmotionType, emotionColors } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { useTimeline } from "@/hooks/use-timeline"
 import { api, type Video } from "@/lib/api"
+import { processTimelineDataForChart, BASE_EMOTIONS, type BaseEmotionType } from "@/lib/emotion-mapper"
 
 export default function TimelinePage() {
   const { data, isLoading, error, refetch } = useTimeline()
-  const [selectedEmotions, setSelectedEmotions] = useState<EmotionType[]>(["joy", "love", "excitement", "nostalgia"])
+  const [selectedEmotions, setSelectedEmotions] = useState<BaseEmotionType[]>(["joy", "love", "excitement", "nostalgia"])
   const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null)
   const [selectedVideo, setSelectedVideo] = useState<Video | null>(null)
 
-  const handleToggleEmotion = (emotion: EmotionType) => {
+  // Process timeline data for chart compatibility
+  const processedData = useMemo(() => {
+    if (!data?.dataPoints) return [];
+    return processTimelineDataForChart(data.dataPoints);
+  }, [data?.dataPoints]);
+
+  const handleToggleEmotion = (emotion: BaseEmotionType) => {
     setSelectedEmotions((prev) => (prev.includes(emotion) ? prev.filter((e) => e !== emotion) : [...prev, emotion]))
   }
 
@@ -95,7 +102,7 @@ export default function TimelinePage() {
           </div>
 
           {/* Stats */}
-          <TimelineStats summary={data.summary} dataPoints={data.dataPoints} />
+          <TimelineStats summary={data.summary} />
 
           {/* Chart */}
           <div className="bg-card border border-border rounded-2xl p-6 mb-8">
@@ -107,7 +114,7 @@ export default function TimelinePage() {
             </div>
 
             <EmotionalChart
-              data={data.dataPoints}
+              data={processedData}
               milestones={data.milestones}
               selectedEmotions={selectedEmotions}
               onMilestoneClick={setSelectedMilestone}
@@ -115,7 +122,7 @@ export default function TimelinePage() {
 
             <div className="mt-8 pt-6 border-t border-border">
               <p className="text-sm text-muted-foreground text-center mb-4">Toggle emotions to filter the timeline</p>
-              <EmotionLegend selectedEmotions={selectedEmotions} onToggle={handleToggleEmotion} />
+              <EmotionLegend emotions={BASE_EMOTIONS} selectedEmotions={selectedEmotions} onToggle={handleToggleEmotion} />
             </div>
           </div>
 
@@ -130,7 +137,7 @@ export default function TimelinePage() {
               </h2>
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {data.milestones.map((milestone) => {
-                  const color = emotionColors[milestone.emotion as EmotionType]
+                  const color = getEmotionColor(milestone.emotion)
                   return (
                     <button
                       key={milestone.id}

@@ -9,8 +9,6 @@ const { asyncHandler } = require('../utils/errors');
 
 const router = express.Router();
 
-const EMOTIONS = ['joy', 'love', 'excitement', 'calm', 'nostalgia', 'sadness'];
-
 const MILESTONE_KEYWORDS = {
   birthday: ['birthday', 'cake', 'celebration', 'party', 'candles'],
   vacation: ['trip', 'travel', 'vacation', 'beach', 'holiday trip', 'getaway'],
@@ -64,7 +62,7 @@ router.get(
           summary: {
             totalVideos: 0,
             totalDuration: 0,
-            dominantEmotion: null,
+            topEmotionTags: [],
             emotionBreakdown: {},
           },
         });
@@ -87,33 +85,20 @@ router.get(
       const dataPoints = [];
       const milestones = [];
       let totalDuration = 0;
-      const aggregatedEmotions = {};
-      EMOTIONS.forEach((e) => (aggregatedEmotions[e] = 0));
+      const aggregatedEmotionTags = {};
 
       for (const [monthKey, monthVideos] of Object.entries(videosByMonth)) {
-        // Aggregate real emotion scores from videos in this month
-        const emotions = {};
-        EMOTIONS.forEach((e) => (emotions[e] = 0));
+        // Collect all emotion tags for this month
+        const monthEmotionTags = {};
 
-        let videosWithEmotions = 0;
         for (const video of monthVideos) {
-          if (video.emotions) {
-            videosWithEmotions++;
-            EMOTIONS.forEach((emotion) => {
-              emotions[emotion] += video.emotions[emotion] || 0;
-            });
-          }
-        }
-
-        // Calculate average emotions for the month
-        if (videosWithEmotions > 0) {
-          EMOTIONS.forEach((emotion) => {
-            emotions[emotion] = emotions[emotion] / videosWithEmotions;
-          });
-        } else {
-          // Fallback to neutral scores if no videos have emotion data
-          EMOTIONS.forEach((emotion) => {
-            emotions[emotion] = 0.5;
+          const tags = video.emotionTags || [];
+          tags.forEach((tag) => {
+            if (typeof tag === 'string') {
+              const normalizedTag = tag.toLowerCase().trim();
+              monthEmotionTags[normalizedTag] = (monthEmotionTags[normalizedTag] || 0) + 1;
+              aggregatedEmotionTags[normalizedTag] = (aggregatedEmotionTags[normalizedTag] || 0) + 1;
+            }
           });
         }
 
@@ -121,26 +106,9 @@ router.get(
         const monthDuration = monthVideos.reduce((sum, v) => sum + (v.duration || 0), 0);
         totalDuration += monthDuration;
 
-        // Aggregate emotions for summary
-        EMOTIONS.forEach((e) => {
-          aggregatedEmotions[e] += emotions[e];
-        });
-
-        // Parse month and year for frontend
-        const [year, monthNum] = monthKey.split('-');
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
         dataPoints.push({
-          date: monthKey,
-          month: monthNames[parseInt(monthNum) - 1],
-          year: parseInt(year),
-          joy: Math.round(emotions.joy * 100),
-          love: Math.round(emotions.love * 100),
-          calm: Math.round(emotions.calm * 100),
-          excitement: Math.round(emotions.excitement * 100),
-          nostalgia: Math.round(emotions.nostalgia * 100),
-          sadness: Math.round(emotions.sadness * 100),
+          date: `${monthKey}-01`,
+          emotionTags: monthEmotionTags,
           videoCount: monthVideos.length,
           totalDuration: monthDuration,
         });
@@ -171,33 +139,23 @@ router.get(
       // Sort data points by date
       dataPoints.sort((a, b) => a.date.localeCompare(b.date));
 
-      // Calculate summary statistics
-      const monthCount = Object.keys(videosByMonth).length;
+      // Get top emotion tags
+      const sortedEmotionTags = Object.entries(aggregatedEmotionTags)
+        .sort((a, b) => b[1] - a[1]);
 
-      // Normalize aggregated emotions to percentages
+      const topEmotionTags = sortedEmotionTags.slice(0, 6).map(([tag]) => tag);
+
+      // Calculate emotion breakdown percentages
+      const totalTagCount = sortedEmotionTags.reduce((sum, [, count]) => sum + count, 0);
       const emotionBreakdown = {};
-      let emotionTotal = 0;
-      EMOTIONS.forEach((e) => {
-        emotionTotal += aggregatedEmotions[e];
-      });
-      EMOTIONS.forEach((e) => {
-        emotionBreakdown[e] = Math.round((aggregatedEmotions[e] / emotionTotal) * 100);
-      });
-
-      // Find dominant emotion
-      let dominantEmotion = EMOTIONS[0];
-      let maxScore = aggregatedEmotions[EMOTIONS[0]];
-      EMOTIONS.forEach((e) => {
-        if (aggregatedEmotions[e] > maxScore) {
-          maxScore = aggregatedEmotions[e];
-          dominantEmotion = e;
-        }
+      sortedEmotionTags.slice(0, 10).forEach(([tag, count]) => {
+        emotionBreakdown[tag] = totalTagCount > 0 ? Math.round((count / totalTagCount) * 100) : 0;
       });
 
       const summary = {
         totalVideos: videos.length,
         totalDuration,
-        dominantEmotion,
+        topEmotionTags,
         emotionBreakdown,
       };
 

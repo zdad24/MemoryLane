@@ -3,7 +3,7 @@
 import { X, Play, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type Milestone, milestoneIcons } from "@/lib/timeline-data"
-import { emotionColors, type EmotionType } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 interface MilestoneDetailProps {
@@ -13,7 +13,7 @@ interface MilestoneDetailProps {
 }
 
 export function MilestoneDetail({ milestone, onClose, onViewVideo }: MilestoneDetailProps) {
-  const colors = emotionColors[milestone.emotion as EmotionType] || emotionColors.joy
+  const colors = getEmotionColor(milestone.emotion)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>

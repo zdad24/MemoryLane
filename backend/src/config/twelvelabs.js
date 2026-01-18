@@ -1,4 +1,14 @@
 require('dotenv').config();
+
+// Ensure fetch is available for Node.js < 18
+if (typeof fetch === 'undefined') {
+  const nodeFetch = require('node-fetch');
+  global.fetch = nodeFetch;
+  global.Headers = nodeFetch.Headers;
+  global.Request = nodeFetch.Request;
+  global.Response = nodeFetch.Response;
+}
+
 const FormData = require('form-data');
 const https = require('https');
 const http = require('http');
@@ -141,6 +151,23 @@ const client = {
       return client.request('/generate', {
         method: 'POST',
         body: JSON.stringify({ video_id: videoId, prompt, ...options }),
+      });
+    },
+  },
+
+  // Analyze videos endpoint - generates summaries, emotion tags, etc. from video content
+  analyze: {
+    async analyze(videoId, prompt, options = {}) {
+      const body = {
+        video_id: videoId,
+        prompt,
+        temperature: options.temperature || 0.2,
+        stream: false,
+        ...options
+      };
+      return client.request('/analyze', {
+        method: 'POST',
+        body: JSON.stringify(body),
       });
     },
   },

@@ -1,33 +1,23 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import { type EmotionType, emotionColors } from "@/lib/mock-data"
-import { Smile, Heart, Leaf, Zap, Clock, CloudRain } from "lucide-react"
+import { getEmotionColor } from "@/lib/mock-data"
 
 interface EmotionFilterProps {
-  selected: EmotionType | "all"
-  onChange: (emotion: EmotionType | "all") => void
-  counts?: Record<EmotionType | "all", number>
+  selected: string | "all"
+  onChange: (emotion: string | "all") => void
+  emotions: string[]
+  counts?: Record<string, number>
 }
 
-const emotionIcons: Record<EmotionType, typeof Smile> = {
-  joy: Smile,
-  love: Heart,
-  calm: Leaf,
-  excitement: Zap,
-  nostalgia: Clock,
-  sadness: CloudRain,
-}
+export function EmotionFilter({ selected, onChange, emotions, counts }: EmotionFilterProps) {
+  const allEmotions = ["all", ...emotions]
 
-const emotions: (EmotionType | "all")[] = ["all", "joy", "love", "calm", "excitement", "nostalgia", "sadness"]
-
-export function EmotionFilter({ selected, onChange, counts }: EmotionFilterProps) {
   return (
     <div className="flex flex-wrap gap-2">
-      {emotions.map((emotion) => {
+      {allEmotions.map((emotion) => {
         const isSelected = selected === emotion
-        const colors = emotion !== "all" ? emotionColors[emotion] : null
-        const Icon = emotion !== "all" ? emotionIcons[emotion] : null
+        const colors = emotion !== "all" ? getEmotionColor(emotion) : null
 
         return (
           <button
@@ -43,7 +33,6 @@ export function EmotionFilter({ selected, onChange, counts }: EmotionFilterProps
                 : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
             )}
           >
-            {Icon && <Icon className="w-4 h-4" />}
             <span className="capitalize">{emotion === "all" ? "All Videos" : emotion}</span>
             {counts && counts[emotion] !== undefined && (
               <span

@@ -2,24 +2,23 @@
 
 import { useState, useMemo } from "react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts"
-import { type TimelineDataPoint, type Milestone, milestoneIcons } from "@/lib/timeline-data"
-import type { EmotionType } from "@/lib/mock-data"
+import { type Milestone, milestoneIcons } from "@/lib/timeline-data"
+import { type ProcessedTimelineDataPoint, type BaseEmotionType, BASE_EMOTION_COLORS, mapTagToBaseEmotion } from "@/lib/emotion-mapper"
 import { cn } from "@/lib/utils"
 
 interface EmotionalChartProps {
-  data: TimelineDataPoint[]
+  data: ProcessedTimelineDataPoint[]
   milestones: Milestone[]
-  selectedEmotions: EmotionType[]
+  selectedEmotions: BaseEmotionType[]
   onMilestoneClick: (milestone: Milestone) => void
 }
 
-const emotionChartColors: Record<EmotionType, string> = {
-  joy: "#FFD93D",
-  love: "#FF6B9D",
-  calm: "#6BCB77",
-  excitement: "#FF8C42",
-  nostalgia: "#9D84B7",
-  sadness: "#4A5568",
+const emotionChartColors = BASE_EMOTION_COLORS
+
+// Get chart color for any emotion, with fallback
+function getChartColor(emotion: string): string {
+  const baseEmotion = mapTagToBaseEmotion(emotion);
+  return baseEmotion ? emotionChartColors[baseEmotion] : emotionChartColors.joy;
 }
 
 const CHART_COLORS = {
@@ -89,7 +88,7 @@ export function EmotionalChart({ data, milestones, selectedEmotions, onMilestone
       <ResponsiveContainer width="100%" height={400}>
         <AreaChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
           <defs>
-            {(Object.keys(emotionChartColors) as EmotionType[]).map((emotion) => (
+            {(Object.keys(emotionChartColors) as BaseEmotionType[]).map((emotion) => (
               <linearGradient key={emotion} id={`gradient-${emotion}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={emotionChartColors[emotion]} stopOpacity={0.8} />
                 <stop offset="95%" stopColor={emotionChartColors[emotion]} stopOpacity={0.1} />
@@ -117,7 +116,7 @@ export function EmotionalChart({ data, milestones, selectedEmotions, onMilestone
               <ReferenceLine
                 key={milestone.id}
                 x={milestone.x}
-                stroke={emotionChartColors[milestone.emotion]}
+                stroke={getChartColor(milestone.emotion)}
                 strokeDasharray="5 5"
                 strokeWidth={2}
                 opacity={hoveredMilestone === milestone.id ? 1 : 0.5}
@@ -157,7 +156,7 @@ export function EmotionalChart({ data, milestones, selectedEmotions, onMilestone
                   )}
                   style={{
                     left: `calc(${position}% + 30px)`,
-                    backgroundColor: emotionChartColors[milestone.emotion],
+                    backgroundColor: getChartColor(milestone.emotion),
                   }}
                   onMouseEnter={() => setHoveredMilestone(milestone.id)}
                   onMouseLeave={() => setHoveredMilestone(null)}
