@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Slider } from "@/components/ui/slider"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Wand2, Clock, Music, Sparkles } from "lucide-react"
-import { type EmotionType, emotionColors, mockVideos } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { musicOptions, transitionOptions } from "@/lib/reel-data"
+import { api, type Video } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 interface ReelConfigProps {
@@ -18,21 +19,38 @@ interface ReelConfigProps {
 export interface ReelConfiguration {
   title: string
   duration: number
-  emotions: EmotionType[]
+  emotions: string[]
   musicId: string
   transitionId: string
 }
 
-const emotions: EmotionType[] = ["joy", "love", "calm", "excitement", "nostalgia"]
-
 export function ReelConfig({ onGenerate, isGenerating }: ReelConfigProps) {
   const [title, setTitle] = useState("")
   const [duration, setDuration] = useState(60)
-  const [selectedEmotions, setSelectedEmotions] = useState<EmotionType[]>(["joy", "love"])
+  const [selectedEmotions, setSelectedEmotions] = useState<string[]>([])
   const [selectedMusic, setSelectedMusic] = useState("emotional")
   const [selectedTransition, setSelectedTransition] = useState("crossfade")
+  const [availableEmotions, setAvailableEmotions] = useState<string[]>([])
+  const [videos, setVideos] = useState<Video[]>([])
 
-  const handleToggleEmotion = (emotion: EmotionType) => {
+  useEffect(() => {
+    // Fetch available emotions and videos
+    const fetchData = async () => {
+      try {
+        const [emotionStats, videosResponse] = await Promise.all([
+          api.getEmotionStats(),
+          api.getVideos(),
+        ])
+        setAvailableEmotions(emotionStats.emotions.slice(0, 8)) // Show top 8 emotions
+        setVideos(videosResponse.videos)
+      } catch (error) {
+        console.error("Failed to fetch data:", error)
+      }
+    }
+    fetchData()
+  }, [])
+
+  const handleToggleEmotion = (emotion: string) => {
     setSelectedEmotions((prev) => (prev.includes(emotion) ? prev.filter((e) => e !== emotion) : [...prev, emotion]))
   }
 
@@ -47,7 +65,11 @@ export function ReelConfig({ onGenerate, isGenerating }: ReelConfigProps) {
   }
 
   // Calculate eligible videos
-  const eligibleVideos = mockVideos.filter((v) => selectedEmotions.length === 0 || selectedEmotions.includes(v.emotion))
+  const eligibleVideos = videos.filter((v) => {
+    if (selectedEmotions.length === 0) return true
+    const videoTags = v.emotionTags || []
+    return selectedEmotions.some((e) => videoTags.includes(e))
+  })
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60)
@@ -104,9 +126,9 @@ export function ReelConfig({ onGenerate, isGenerating }: ReelConfigProps) {
           Emotions to Include
         </Label>
         <div className="flex flex-wrap gap-2">
-          {emotions.map((emotion) => {
+          {availableEmotions.map((emotion) => {
             const isSelected = selectedEmotions.includes(emotion)
-            const colors = emotionColors[emotion]
+            const colors = getEmotionColor(emotion)
             return (
               <button
                 key={emotion}

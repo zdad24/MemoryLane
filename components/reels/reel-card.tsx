@@ -3,7 +3,7 @@
 import { Play, Clock, Download, Share2, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import type { HighlightReel } from "@/lib/reel-data"
-import { emotionColors, type EmotionType } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 interface ReelCardProps {
@@ -58,7 +58,7 @@ export function ReelCard({ reel, onPlay, onDelete }: ReelCardProps) {
         {/* Emotions */}
         <div className="flex flex-wrap gap-1 mb-3">
           {reel.emotions.map((emotion) => {
-            const colors = emotionColors[emotion as EmotionType]
+            const colors = getEmotionColor(emotion)
             return (
               <span key={emotion} className={cn("px-2 py-0.5 rounded-full text-xs capitalize", colors.bg, colors.text)}>
                 {emotion}

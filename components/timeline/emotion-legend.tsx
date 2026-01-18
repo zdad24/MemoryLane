@@ -1,32 +1,20 @@
 "use client"
 
-import { type EmotionType, emotionColors } from "@/lib/mock-data"
+import { getEmotionColor } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
-import { Smile, Heart, Leaf, Zap, Clock, CloudRain } from "lucide-react"
 
 interface EmotionLegendProps {
-  selectedEmotions: EmotionType[]
-  onToggle: (emotion: EmotionType) => void
+  emotions: string[]
+  selectedEmotions: string[]
+  onToggle: (emotion: string) => void
 }
 
-const emotionIcons: Record<EmotionType, typeof Smile> = {
-  joy: Smile,
-  love: Heart,
-  calm: Leaf,
-  excitement: Zap,
-  nostalgia: Clock,
-  sadness: CloudRain,
-}
-
-const emotions: EmotionType[] = ["joy", "love", "calm", "excitement", "nostalgia", "sadness"]
-
-export function EmotionLegend({ selectedEmotions, onToggle }: EmotionLegendProps) {
+export function EmotionLegend({ emotions, selectedEmotions, onToggle }: EmotionLegendProps) {
   return (
     <div className="flex flex-wrap gap-3 justify-center">
       {emotions.map((emotion) => {
         const isSelected = selectedEmotions.includes(emotion)
-        const colors = emotionColors[emotion]
-        const Icon = emotionIcons[emotion]
+        const colors = getEmotionColor(emotion)
 
         return (
           <button
@@ -39,7 +27,6 @@ export function EmotionLegend({ selectedEmotions, onToggle }: EmotionLegendProps
                 : "bg-secondary text-muted-foreground hover:bg-secondary/80",
             )}
           >
-            <Icon className="w-4 h-4" />
             <span className="capitalize">{emotion}</span>
           </button>
         )

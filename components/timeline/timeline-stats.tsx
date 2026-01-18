@@ -1,37 +1,23 @@
 "use client"
 
-import { Film, Clock, Smile, Calendar } from "lucide-react"
-import { mockVideos, type EmotionType, emotionColors } from "@/lib/mock-data"
+import { Film, Clock, Tag, Calendar } from "lucide-react"
+import { getEmotionColor } from "@/lib/mock-data"
+import { type TimelineSummary } from "@/lib/api"
 
-export function TimelineStats() {
-  // Calculate stats
-  const totalVideos = mockVideos.length
-  const totalMinutes = Math.round(mockVideos.reduce((acc, v) => acc + v.durationSeconds, 0) / 60)
+interface TimelineStatsProps {
+  summary: TimelineSummary
+}
 
-  // Count emotions
-  const emotionCounts = mockVideos.reduce(
-    (acc, video) => {
-      acc[video.emotion] = (acc[video.emotion] || 0) + 1
-      return acc
-    },
-    {} as Record<EmotionType, number>,
-  )
-
-  // Find dominant emotion
-  const dominantEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0]
-  const colors = emotionColors[dominantEmotion[0] as EmotionType]
-
-  // Calculate date range
-  const dates = mockVideos.map((v) => new Date(v.date))
-  const startDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-  const endDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-  const months = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
+export function TimelineStats({ summary }: TimelineStatsProps) {
+  const totalMinutes = Math.round(summary.totalDuration / 60)
+  const topEmotion = summary.topEmotionTags[0] || "none"
+  const colors = getEmotionColor(topEmotion)
 
   const stats = [
     {
       icon: Film,
       label: "Videos",
-      value: totalVideos,
+      value: summary.totalVideos,
       color: "text-primary",
     },
     {
@@ -41,15 +27,15 @@ export function TimelineStats() {
       color: "text-[#FFD93D]",
     },
     {
-      icon: Smile,
+      icon: Tag,
       label: "Top Emotion",
-      value: dominantEmotion[0].charAt(0).toUpperCase() + dominantEmotion[0].slice(1),
+      value: topEmotion.charAt(0).toUpperCase() + topEmotion.slice(1),
       color: colors.bg.replace("bg-", "text-"),
     },
     {
       icon: Calendar,
-      label: "Time Span",
-      value: `${months} months`,
+      label: "Total Tags",
+      value: Object.keys(summary.emotionBreakdown).length,
       color: "text-[#6BCB77]",
     },
   ]

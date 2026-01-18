@@ -5,6 +5,15 @@
 
 require('dotenv').config();
 
+// Polyfill fetch for Node versions that don't provide it natively
+if (typeof fetch === 'undefined') {
+  const nodeFetch = require('node-fetch');
+  global.fetch = nodeFetch;
+  global.Headers = nodeFetch.Headers;
+  global.Request = nodeFetch.Request;
+  global.Response = nodeFetch.Response;
+}
+
 const express = require('express');
 const cors = require('cors');
 const { errorHandler, NotFoundError } = require('./utils/errors');

@@ -41,8 +41,13 @@ function getStatusBadge(status: string) {
   }
 }
 
+function getEmotionTags(video: Video): string[] {
+  return video.emotionTags || [];
+}
+
 export function VideoCard({ video, onClick, viewMode = "grid" }: VideoCardProps) {
   const statusBadge = getStatusBadge(video.indexingStatus)
+  const emotionTags = getEmotionTags(video)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const [videoError, setVideoError] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -143,18 +148,30 @@ export function VideoCard({ video, onClick, viewMode = "grid" }: VideoCardProps)
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-4 flex flex-col justify-center">
-          <h3 className="font-semibold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">
-            {video.originalName || video.fileName}
-          </h3>
-          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-            {video.summary || "Processing video..."}
-          </p>
+      <div className="flex-1 p-4 flex flex-col justify-center">
+        <h3 className="font-semibold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+          {video.originalName || video.fileName}
+        </h3>
+        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+          {video.summary || "Processing video..."}
+        </p>
+        {emotionTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {emotionTags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-1 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <Calendar className="w-3 h-3" />
                 {formatDate(video.uploadedAt)}
               </span>
               {video.duration && (
@@ -247,6 +264,18 @@ export function VideoCard({ video, onClick, viewMode = "grid" }: VideoCardProps)
         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
           {video.summary || "Processing video..."}
         </p>
+        {emotionTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            {emotionTags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-1 rounded-full text-[10px] font-medium bg-secondary text-secondary-foreground"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <div className="flex items-center gap-3">

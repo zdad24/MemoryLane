@@ -1,21 +1,35 @@
 require('dotenv').config();
 const admin = require('firebase-admin');
 
-// Load service account key with error handling
+// Prefer serviceAccountKey.json if present, otherwise fall back to env vars.
 let serviceAccount;
 try {
   serviceAccount = require('../../serviceAccountKey.json');
 } catch (error) {
-  console.error('❌ serviceAccountKey.json not found!');
-  console.error('   Please download it from Firebase Console:');
-  console.error('   Project Settings > Service Accounts > Generate New Private Key');
-  process.exit(1);
+  const {
+    FIREBASE_PROJECT_ID,
+    FIREBASE_CLIENT_EMAIL,
+    FIREBASE_PRIVATE_KEY,
+  } = process.env;
+
+  if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+    serviceAccount = {
+      project_id: FIREBASE_PROJECT_ID,
+      client_email: FIREBASE_CLIENT_EMAIL,
+      private_key: FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    };
+  } else {
+    console.error('❌ Firebase credentials not found.');
+    console.error('   Provide serviceAccountKey.json at repo root OR set env vars:');
+    console.error('   FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY');
+    process.exit(1);
+  }
 }
 
 // Initialize Firebase Admin SDK
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: process.env.FIREBASE_STORAGE_BUCKET
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
 });
 
 // Set up Firestore database connection
