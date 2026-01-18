@@ -103,6 +103,9 @@ export function EmotionalChart({ data, milestones, selectedEmotions, onMilestone
             fontSize={12}
             tickLine={false}
             axisLine={false}
+            domain={[0, 100]}
+            allowDataOverflow={true}
+            ticks={[0, 25, 50, 75, 100]}
             tickFormatter={(value) => `${value}%`}
           />
           <Tooltip content={<CustomTooltip />} />

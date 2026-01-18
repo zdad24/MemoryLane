@@ -12,15 +12,21 @@ const router = express.Router();
 const EMOTIONS = ['joy', 'love', 'excitement', 'calm', 'nostalgia', 'sadness'];
 
 const MILESTONE_KEYWORDS = {
-  birthday: ['birthday', 'cake', 'celebration'],
-  vacation: ['trip', 'travel', 'vacation', 'beach'],
-  graduation: ['graduation', 'degree', 'graduate'],
+  birthday: ['birthday', 'cake', 'celebration', 'party', 'candles'],
+  vacation: ['trip', 'travel', 'vacation', 'beach', 'holiday trip', 'getaway'],
+  graduation: ['graduation', 'degree', 'graduate', 'diploma', 'commencement'],
+  wedding: ['wedding', 'married', 'bride', 'groom', 'ceremony', 'vows'],
+  birth: ['baby', 'born', 'newborn', 'first steps', 'infant'],
+  holiday: ['christmas', 'thanksgiving', 'easter', 'new year', 'halloween'],
 };
 
 const MILESTONE_TITLES = {
   birthday: 'Birthday Celebration',
   vacation: 'Vacation Memory',
   graduation: 'Graduation Day',
+  wedding: 'Wedding Moment',
+  birth: 'New Addition',
+  holiday: 'Holiday Memory',
 };
 
 /**
@@ -120,9 +126,21 @@ router.get(
           aggregatedEmotions[e] += emotions[e];
         });
 
+        // Parse month and year for frontend
+        const [year, monthNum] = monthKey.split('-');
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+          'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
         dataPoints.push({
-          date: `${monthKey}-01`,
-          emotions,
+          date: monthKey,
+          month: monthNames[parseInt(monthNum) - 1],
+          year: parseInt(year),
+          joy: Math.round(emotions.joy * 100),
+          love: Math.round(emotions.love * 100),
+          calm: Math.round(emotions.calm * 100),
+          excitement: Math.round(emotions.excitement * 100),
+          nostalgia: Math.round(emotions.nostalgia * 100),
+          sadness: Math.round(emotions.sadness * 100),
           videoCount: monthVideos.length,
           totalDuration: monthDuration,
         });
@@ -135,11 +153,14 @@ router.get(
             const found = keywords.some((keyword) => text.includes(keyword));
             if (found) {
               milestones.push({
+                id: `milestone-${video.id}`,
                 date: `${monthKey}-01`,
                 type,
-                title: MILESTONE_TITLES[type],
+                title: video.originalName || MILESTONE_TITLES[type],
+                description: video.summary || `A special ${type} moment`,
                 videoId: video.id,
                 thumbnailUrl: video.storageUrl || null,
+                emotion: video.dominantEmotion || 'joy',
               });
               break; // Only one milestone per video
             }

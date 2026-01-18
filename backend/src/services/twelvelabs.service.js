@@ -262,17 +262,38 @@ async function extractVideoData(videoId, tlVideoId, indexId) {
     }
 
     // Only add metadata fields if they have actual values
-    if (videoInfo?.metadata) {
-      const metadata = videoInfo.metadata;
-      if (metadata.duration !== undefined && metadata.duration !== null) {
-        updateData.duration = metadata.duration;
+    // Check multiple possible locations for duration
+    let videoDuration = null;
+    if (videoInfo) {
+      // Try metadata.duration first
+      if (videoInfo.metadata?.duration !== undefined && videoInfo.metadata?.duration !== null) {
+        videoDuration = videoInfo.metadata.duration;
       }
-      // Build metadata object with only defined values
+      // Try root-level duration
+      else if (videoInfo.duration !== undefined && videoInfo.duration !== null) {
+        videoDuration = videoInfo.duration;
+      }
+      // Try system_metadata
+      else if (videoInfo.system_metadata?.duration !== undefined) {
+        videoDuration = videoInfo.system_metadata.duration;
+      }
+    }
+
+    if (videoDuration !== null) {
+      updateData.duration = videoDuration;
+      console.log(`[TwelveLabs] Video duration: ${videoDuration} seconds`);
+    } else {
+      console.log('[TwelveLabs] Warning: Could not extract video duration');
+    }
+
+    // Build metadata object with only defined values
+    if (videoInfo?.metadata || videoInfo?.system_metadata) {
+      const metadata = videoInfo.metadata || videoInfo.system_metadata || {};
       const tlMetadata = {};
       if (metadata.width !== undefined) tlMetadata.width = metadata.width;
       if (metadata.height !== undefined) tlMetadata.height = metadata.height;
       if (metadata.fps !== undefined) tlMetadata.fps = metadata.fps;
-      if (metadata.duration !== undefined) tlMetadata.duration = metadata.duration;
+      if (videoDuration !== null) tlMetadata.duration = videoDuration;
 
       if (Object.keys(tlMetadata).length > 0) {
         updateData.twelveLabsMetadata = tlMetadata;

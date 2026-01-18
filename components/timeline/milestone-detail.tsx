@@ -3,7 +3,7 @@
 import { X, Play, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { type Milestone, milestoneIcons } from "@/lib/timeline-data"
-import { emotionColors, mockVideos } from "@/lib/mock-data"
+import { emotionColors, type EmotionType } from "@/lib/mock-data"
 import { cn } from "@/lib/utils"
 
 interface MilestoneDetailProps {
@@ -13,8 +13,7 @@ interface MilestoneDetailProps {
 }
 
 export function MilestoneDetail({ milestone, onClose, onViewVideo }: MilestoneDetailProps) {
-  const colors = emotionColors[milestone.emotion]
-  const video = milestone.videoId ? mockVideos.find((v) => v.id === milestone.videoId) : null
+  const colors = emotionColors[milestone.emotion as EmotionType] || emotionColors.joy
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
@@ -35,7 +34,7 @@ export function MilestoneDetail({ milestone, onClose, onViewVideo }: MilestoneDe
 
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-3xl">
-              {milestoneIcons[milestone.type]}
+              {milestoneIcons[milestone.type] || "📌"}
             </div>
             <div>
               <span className={cn("text-sm font-medium opacity-80", colors.text)}>
@@ -64,27 +63,20 @@ export function MilestoneDetail({ milestone, onClose, onViewVideo }: MilestoneDe
 
           <p className="text-foreground mb-6">{milestone.description}</p>
 
-          {/* Video preview */}
-          {video && (
+          {/* Video action */}
+          {milestone.videoId && (
             <div className="mb-6">
               <h4 className="text-sm font-medium text-muted-foreground mb-2">Related Video</h4>
               <button
-                onClick={() => onViewVideo(video.id)}
+                onClick={() => onViewVideo(milestone.videoId!)}
                 className="w-full flex items-center gap-4 p-3 rounded-xl bg-secondary/50 hover:bg-secondary transition-colors group"
               >
-                <div className="relative w-24 h-16 rounded-lg overflow-hidden">
-                  <img
-                    src={video.thumbnail || "/placeholder.svg"}
-                    alt={video.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Play className="w-6 h-6 text-white" />
-                  </div>
+                <div className="relative w-24 h-16 rounded-lg overflow-hidden bg-secondary flex items-center justify-center">
+                  <Play className="w-6 h-6 text-muted-foreground group-hover:text-foreground transition-colors" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-medium text-foreground">{video.title}</p>
-                  <p className="text-sm text-muted-foreground">{video.duration}</p>
+                  <p className="font-medium text-foreground">View Memory</p>
+                  <p className="text-sm text-muted-foreground">Click to watch</p>
                 </div>
               </button>
             </div>
@@ -93,11 +85,11 @@ export function MilestoneDetail({ milestone, onClose, onViewVideo }: MilestoneDe
           <Button
             className={cn("w-full", colors.bg, colors.text, "hover:opacity-90")}
             onClick={() => {
-              if (video) onViewVideo(video.id)
+              if (milestone.videoId) onViewVideo(milestone.videoId)
               else onClose()
             }}
           >
-            {video ? "Watch Memory" : "Close"}
+            {milestone.videoId ? "Watch Memory" : "Close"}
           </Button>
         </div>
       </div>

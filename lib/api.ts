@@ -76,25 +76,38 @@ export interface SearchResponse {
   total: number;
 }
 
+export type MilestoneType = 'birthday' | 'wedding' | 'graduation' | 'vacation' | 'birth' | 'holiday';
+export type EmotionType = 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' | 'sadness';
+
 export interface TimelineDataPoint {
   date: string;
-  emotions: EmotionScores;
+  month: string;
+  year: number;
+  joy: number;
+  love: number;
+  calm: number;
+  excitement: number;
+  nostalgia: number;
+  sadness: number;
   videoCount: number;
   totalDuration: number;
 }
 
 export interface Milestone {
+  id: string;
   date: string;
-  type: 'birthday' | 'vacation' | 'graduation';
+  type: MilestoneType;
   title: string;
-  videoId: string;
-  thumbnailUrl: string | null;
+  description: string;
+  videoId?: string;
+  thumbnailUrl?: string;
+  emotion: EmotionType;
 }
 
 export interface TimelineSummary {
   totalVideos: number;
   totalDuration: number;
-  dominantEmotion: string | null;
+  dominantEmotion: EmotionType | null;
   emotionBreakdown: Record<string, number>;
 }
 

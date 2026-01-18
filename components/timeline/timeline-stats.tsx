@@ -1,37 +1,35 @@
 "use client"
 
 import { Film, Clock, Smile, Calendar } from "lucide-react"
-import { mockVideos, type EmotionType, emotionColors } from "@/lib/mock-data"
+import type { TimelineDataPoint, TimelineSummary, EmotionType } from "@/lib/api"
 
-export function TimelineStats() {
-  // Calculate stats
-  const totalVideos = mockVideos.length
-  const totalMinutes = Math.round(mockVideos.reduce((acc, v) => acc + v.durationSeconds, 0) / 60)
+const emotionColors: Record<EmotionType, { bg: string; text: string }> = {
+  joy: { bg: "bg-[#FFD93D]", text: "text-[#FFD93D]" },
+  love: { bg: "bg-[#FF6B6B]", text: "text-[#FF6B6B]" },
+  excitement: { bg: "bg-[#C44DFF]", text: "text-[#C44DFF]" },
+  calm: { bg: "bg-[#4DFFDB]", text: "text-[#4DFFDB]" },
+  nostalgia: { bg: "bg-[#FFB066]", text: "text-[#FFB066]" },
+  sadness: { bg: "bg-[#5DA3FA]", text: "text-[#5DA3FA]" },
+}
 
-  // Count emotions
-  const emotionCounts = mockVideos.reduce(
-    (acc, video) => {
-      acc[video.emotion] = (acc[video.emotion] || 0) + 1
-      return acc
-    },
-    {} as Record<EmotionType, number>,
-  )
+interface TimelineStatsProps {
+  summary: TimelineSummary;
+  dataPoints: TimelineDataPoint[];
+}
 
-  // Find dominant emotion
-  const dominantEmotion = Object.entries(emotionCounts).sort((a, b) => b[1] - a[1])[0]
-  const colors = emotionColors[dominantEmotion[0] as EmotionType]
+export function TimelineStats({ summary, dataPoints }: TimelineStatsProps) {
+  const totalMinutes = Math.round(summary.totalDuration / 60);
+  const months = dataPoints.length;
 
-  // Calculate date range
-  const dates = mockVideos.map((v) => new Date(v.date))
-  const startDate = new Date(Math.min(...dates.map((d) => d.getTime())))
-  const endDate = new Date(Math.max(...dates.map((d) => d.getTime())))
-  const months = Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30))
+  const dominantEmotionColor = summary.dominantEmotion
+    ? emotionColors[summary.dominantEmotion]?.text || "text-primary"
+    : "text-muted";
 
   const stats = [
     {
       icon: Film,
       label: "Videos",
-      value: totalVideos,
+      value: summary.totalVideos,
       color: "text-primary",
     },
     {
@@ -43,8 +41,10 @@ export function TimelineStats() {
     {
       icon: Smile,
       label: "Top Emotion",
-      value: dominantEmotion[0].charAt(0).toUpperCase() + dominantEmotion[0].slice(1),
-      color: colors.bg.replace("bg-", "text-"),
+      value: summary.dominantEmotion
+        ? summary.dominantEmotion.charAt(0).toUpperCase() + summary.dominantEmotion.slice(1)
+        : "N/A",
+      color: dominantEmotionColor,
     },
     {
       icon: Calendar,
