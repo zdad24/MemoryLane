@@ -5,6 +5,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 // Types
+export interface EmotionScores {
+  joy: number;
+  love: number;
+  calm: number;
+  excitement: number;
+  nostalgia: number;
+  sadness: number;
+}
+
 export interface Video {
   id: string;
   fileName: string;
@@ -20,6 +29,10 @@ export interface Video {
   summary?: string;
   transcript?: string;
   duration?: number;
+  emotions?: EmotionScores;
+  dominantEmotion?: 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' | 'sadness';
+  emotionConfidence?: number;
+  emotionAnalyzedAt?: string | Date;
 }
 
 export interface UploadResponse {
@@ -65,13 +78,7 @@ export interface SearchResponse {
 
 export interface TimelineDataPoint {
   date: string;
-  emotions: {
-    joy: number;
-    love: number;
-    excitement: number;
-    calm: number;
-    nostalgia: number;
-  };
+  emotions: EmotionScores;
   videoCount: number;
   totalDuration: number;
 }
@@ -266,6 +273,30 @@ export const api = {
     return fetchApi<ChatHistoryResponse>(
       `/api/chat/history?conversationId=${conversationId}&limit=${limit}`
     );
+  },
+
+  /**
+   * Get videos by emotion
+   */
+  getVideosByEmotion: async (
+    emotion: 'joy' | 'love' | 'calm' | 'excitement' | 'nostalgia' | 'sadness',
+    options?: { limit?: number; minConfidence?: number }
+  ): Promise<{ emotion: string; results: Video[]; total: number }> => {
+    const params = new URLSearchParams({ emotion });
+    if (options?.limit) params.append('limit', String(options.limit));
+    if (options?.minConfidence) params.append('minConfidence', String(options.minConfidence));
+    return fetchApi(`/api/search/by-emotion?${params.toString()}`);
+  },
+
+  /**
+   * Get emotion statistics
+   */
+  getEmotionStats: async (): Promise<{
+    emotions: string[];
+    counts: Record<string, number>;
+    totalVideos: number;
+  }> => {
+    return fetchApi('/api/search/emotions');
   },
 };
 

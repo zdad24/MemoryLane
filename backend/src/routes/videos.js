@@ -256,7 +256,8 @@ router.post(
   '/:id/index',
   asyncHandler(async (req, res) => {
     const { id } = req.params;
-    console.log(`[Videos] Index request for video: ${id}`);
+    const { force } = req.query;
+    console.log(`[Videos] Index request for video: ${id}${force ? ' (force re-index)' : ''}`);
 
     try {
       // Get video document
@@ -269,18 +270,28 @@ router.post(
 
       const videoData = doc.data();
 
-      // Check if already indexing or completed
-      if (videoData.indexingStatus === 'indexing') {
+      // Check if already indexing (unless force)
+      if (videoData.indexingStatus === 'indexing' && !force) {
         return res.status(400).json({
           success: false,
           message: 'Video is already being indexed',
         });
       }
 
-      if (videoData.indexingStatus === 'completed') {
+      if (videoData.indexingStatus === 'completed' && !force) {
         return res.status(400).json({
           success: false,
-          message: 'Video has already been indexed',
+          message: 'Video has already been indexed. Use ?force=true to re-index.',
+        });
+      }
+
+      // Reset indexing status for re-indexing
+      if (force) {
+        await db.collection('videos').doc(id).update({
+          indexingStatus: 'pending',
+          twelveLabsVideoId: null,
+          twelveLabsTaskId: null,
+          twelveLabsIndexId: null,
         });
       }
 

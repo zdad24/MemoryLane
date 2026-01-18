@@ -9,7 +9,7 @@ const { asyncHandler } = require('../utils/errors');
 
 const router = express.Router();
 
-const EMOTIONS = ['joy', 'love', 'excitement', 'calm', 'nostalgia'];
+const EMOTIONS = ['joy', 'love', 'excitement', 'calm', 'nostalgia', 'sadness'];
 
 const MILESTONE_KEYWORDS = {
   birthday: ['birthday', 'cake', 'celebration'],
@@ -85,11 +85,31 @@ router.get(
       EMOTIONS.forEach((e) => (aggregatedEmotions[e] = 0));
 
       for (const [monthKey, monthVideos] of Object.entries(videosByMonth)) {
-        // Generate mock emotion scores for this month
+        // Aggregate real emotion scores from videos in this month
         const emotions = {};
-        EMOTIONS.forEach((emotion) => {
-          emotions[emotion] = Math.random() * 0.8 + 0.2; // 0.2 to 1.0
-        });
+        EMOTIONS.forEach((e) => (emotions[e] = 0));
+
+        let videosWithEmotions = 0;
+        for (const video of monthVideos) {
+          if (video.emotions) {
+            videosWithEmotions++;
+            EMOTIONS.forEach((emotion) => {
+              emotions[emotion] += video.emotions[emotion] || 0;
+            });
+          }
+        }
+
+        // Calculate average emotions for the month
+        if (videosWithEmotions > 0) {
+          EMOTIONS.forEach((emotion) => {
+            emotions[emotion] = emotions[emotion] / videosWithEmotions;
+          });
+        } else {
+          // Fallback to neutral scores if no videos have emotion data
+          EMOTIONS.forEach((emotion) => {
+            emotions[emotion] = 0.5;
+          });
+        }
 
         // Calculate totals for this month
         const monthDuration = monthVideos.reduce((sum, v) => sum + (v.duration || 0), 0);

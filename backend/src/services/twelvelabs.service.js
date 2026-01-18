@@ -5,9 +5,9 @@
 
 const client = require('../config/twelvelabs');
 const { db } = require('../config/firebase');
-const { generateSummary } = require('./gemini.service');
+const { generateSummary, analyzeEmotions } = require('./gemini.service');
 
-const INDEX_NAME = 'memorylane-hackathon';
+const INDEX_NAME = 'My Index (Default)';
 
 /**
  * Get or create the TwelveLabs index for MemoryLane
@@ -235,6 +235,16 @@ async function extractVideoData(videoId, tlVideoId, indexId) {
       console.error('[TwelveLabs] Failed to generate summary:', error.message);
     }
 
+    // Analyze emotions from the summary
+    let emotionData = null;
+    try {
+      console.log(`[TwelveLabs] Analyzing emotions for video: ${videoId}`);
+      emotionData = await analyzeEmotions(summary);
+      console.log(`[TwelveLabs] Emotion analysis complete: dominant=${emotionData.dominantEmotion}`);
+    } catch (error) {
+      console.error('[TwelveLabs] Failed to analyze emotions:', error.message);
+    }
+
     // Update Firestore with extracted data - only include defined values
     const updateData = {
       twelveLabsProcessed: true,
@@ -242,6 +252,14 @@ async function extractVideoData(videoId, tlVideoId, indexId) {
       summary: summary,
       indexingStatus: 'completed'
     };
+
+    // Add emotion fields if analysis was successful
+    if (emotionData) {
+      updateData.emotions = emotionData.emotions;
+      updateData.dominantEmotion = emotionData.dominantEmotion;
+      updateData.emotionConfidence = emotionData.emotionConfidence;
+      updateData.emotionAnalyzedAt = new Date();
+    }
 
     // Only add metadata fields if they have actual values
     if (videoInfo?.metadata) {
