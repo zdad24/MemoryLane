@@ -16,7 +16,10 @@
       "Bash(npx tsc:*)",
       "Bash(npx kill-port:*)",
       "Bash(python3:*)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "Bash(start http://localhost:3000)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }

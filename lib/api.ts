@@ -1,8 +1,11 @@
 /**
  * API Client for MemoryLane Backend
+ *
+ * When deployed to Vercel, API routes are served from the same origin (empty string).
+ * For local development with Express backend, set NEXT_PUBLIC_API_URL=http://localhost:3001
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 // Types
 export interface Video {
@@ -180,29 +183,10 @@ async function fetchApi<T>(
 // API Client
 export const api = {
   /**
-   * Upload a video file
+   * NOTE: Video upload is now handled directly via Firebase client SDK.
+   * See lib/firebase-client.ts - uploadVideoToFirebase()
+   * This bypasses Vercel's 4.5MB payload limit.
    */
-  uploadVideo: async (file: File): Promise<UploadResponse> => {
-    const formData = new FormData();
-    formData.append('video', file);
-
-    const res = await fetch(`${API_URL}/api/videos/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      throw new ApiError(
-        data?.error?.message || 'Upload failed',
-        res.status,
-        data
-      );
-    }
-
-    return data;
-  },
 
   /**
    * Trigger video indexing with TwelveLabs

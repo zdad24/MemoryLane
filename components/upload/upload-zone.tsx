@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { uploadVideoToFirebase, isFirebaseConfigured } from "@/lib/firebase-client"
 import { useRouter } from "next/navigation"
 
 interface UploadFile {
@@ -45,34 +46,38 @@ export function UploadZone() {
 
   const uploadFile = async (uploadFile: UploadFile) => {
     try {
-      // Update progress periodically during upload
-      const progressInterval = setInterval(() => {
+      // Check if Firebase is configured for direct uploads
+      if (!isFirebaseConfigured()) {
+        throw new Error("Firebase not configured. Please set NEXT_PUBLIC_FIREBASE_* environment variables.")
+      }
+
+      // Upload directly to Firebase with progress tracking
+      const result = await uploadVideoToFirebase(uploadFile.file, (progress) => {
         setFiles((prev) =>
           prev.map((f) =>
-            f.id === uploadFile.id && f.status === "uploading"
-              ? { ...f, progress: Math.min(f.progress + 10, 90) }
+            f.id === uploadFile.id
+              ? {
+                  ...f,
+                  progress: progress.progress,
+                  status: progress.state === "success" ? "processing" as const : "uploading" as const,
+                }
               : f
           )
         )
-      }, 300)
-
-      // Upload to API
-      const response = await api.uploadVideo(uploadFile.file)
-
-      clearInterval(progressInterval)
+      })
 
       // Update to processing state
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id
-            ? { ...f, progress: 100, status: "processing" as const, videoId: response.videoId }
+            ? { ...f, progress: 100, status: "processing" as const, videoId: result.videoId }
             : f
         )
       )
 
-      // Optionally trigger indexing
+      // Trigger indexing via API
       try {
-        await api.indexVideo(response.videoId)
+        await api.indexVideo(result.videoId)
       } catch (indexError) {
         console.log("Indexing will be done later:", indexError)
       }
