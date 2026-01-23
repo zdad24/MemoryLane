@@ -52,7 +52,7 @@ export const db = new Proxy({} as admin.firestore.Firestore, {
       initializeFirebaseAdmin();
       _db = admin.firestore();
     }
-    return (_db as Record<string | symbol, unknown>)[prop];
+    return (_db as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 
@@ -63,7 +63,7 @@ export const storage = new Proxy({} as ReturnType<typeof admin.storage.prototype
       initializeFirebaseAdmin();
       _storage = admin.storage().bucket();
     }
-    return (_storage as Record<string | symbol, unknown>)[prop];
+    return (_storage as unknown as Record<string | symbol, unknown>)[prop];
   },
 });
 

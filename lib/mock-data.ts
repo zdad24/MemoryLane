@@ -181,4 +181,5 @@ export interface VideoMetadata {
   date?: string
   emotions?: EmotionType[]
   storageUrl?: string
+  summary?: string
 }
