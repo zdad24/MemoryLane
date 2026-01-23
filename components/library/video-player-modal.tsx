@@ -59,7 +59,7 @@ export function VideoPlayerModal({ video, startTime = 0, onClose, onDelete }: Vi
   // Extract properties based on video type
   const videoUrl = isReal ? video.storageUrl : video.thumbnail
   const videoTitle = isReal ? (video.originalName || video.fileName) : video.title
-  const videoDuration = isReal ? (video.duration || 0) : video.durationSeconds
+  const videoDuration = isReal ? (video.duration || 0) : 0
   const videoDate = isReal ? video.uploadedAt : video.date
   const videoSummary = video.summary
   const videoTranscript = isReal ? video.transcript : undefined
