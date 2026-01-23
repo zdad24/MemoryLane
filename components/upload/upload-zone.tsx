@@ -78,8 +78,8 @@ export function UploadZone() {
       // Trigger indexing via API
       try {
         await api.indexVideo(result.videoId)
-      } catch (indexError) {
-        console.log("Indexing will be done later:", indexError)
+      } catch {
+        // Indexing will be done later
       }
 
       // Mark as complete
@@ -89,7 +89,6 @@ export function UploadZone() {
         )
       )
     } catch (error) {
-      console.error("Upload error:", error)
       setFiles((prev) =>
         prev.map((f) =>
           f.id === uploadFile.id

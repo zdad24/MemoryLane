@@ -25,8 +25,6 @@ const MILESTONE_TITLES: Record<string, string> = {
 };
 
 export async function GET() {
-  console.log('[Timeline API] Generating timeline data...');
-
   try {
     const snapshot = await db
       .collection('videos')
@@ -62,8 +60,6 @@ export async function GET() {
       });
     });
 
-    console.log(`[Timeline API] Found ${videos.length} completed videos`);
-
     // If no videos, return empty data
     if (videos.length === 0) {
       return NextResponse.json({
@@ -88,8 +84,6 @@ export async function GET() {
       }
       videosByMonth[monthKey].push(video);
     });
-
-    console.log(`[Timeline API] Grouped into ${Object.keys(videosByMonth).length} months`);
 
     // Generate data points
     interface DataPoint {
@@ -176,8 +170,6 @@ export async function GET() {
       emotionBreakdown[tag] = totalTagCount > 0 ? Math.round((count / totalTagCount) * 100) : 0;
     });
 
-    console.log(`[Timeline API] Generated ${dataPoints.length} data points, ${milestones.length} milestones`);
-
     return NextResponse.json({
       dataPoints,
       milestones,
@@ -189,7 +181,6 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error('[Timeline API] Error:', error);
     return NextResponse.json(
       {
         success: false,

@@ -112,8 +112,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { message, conversationId: inputConversationId } = body;
 
-    console.log(`[Chat API] Message received: "${message?.slice(0, 50)}..."`);
-
     if (!message || typeof message !== 'string') {
       return NextResponse.json(
         { success: false, error: { message: 'Message is required' } },
@@ -164,8 +162,8 @@ export async function POST(request: NextRequest) {
           .sort((a, b) => b.searchScore - a.searchScore);
 
         candidateVideos = merged.slice(0, MAX_CONTEXT_VIDEOS);
-      } catch (searchError) {
-        console.error('[Chat API] Search error:', searchError);
+      } catch {
+        // Search failed, will use fallback
       }
     }
 
@@ -203,9 +201,7 @@ Response:`;
     let responseText = "I'm having trouble processing your request right now. Please try again in a moment.";
     try {
       responseText = await generateText(prompt);
-      console.log(`[Chat API] Response generated (${responseText.length} chars)`);
     } catch (geminiError) {
-      console.error('[Chat API] Gemini API error:', geminiError);
       const errorMsg = geminiError instanceof Error ? geminiError.message : '';
       if (errorMsg.includes('429') || errorMsg.includes('quota')) {
         responseText =
@@ -221,7 +217,6 @@ Response:`;
           messages: [],
         });
         conversationId = convDoc.id;
-        console.log(`[Chat API] New conversation created: ${conversationId}`);
       }
 
       const attachedVideos = candidateVideos.slice(0, ATTACH_LIMIT).map((v) => ({
@@ -243,9 +238,8 @@ Response:`;
         ),
         updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       });
-      console.log(`[Chat API] Conversation saved: ${conversationId}`);
-    } catch (firestoreError) {
-      console.error('[Chat API] Firestore error:', firestoreError);
+    } catch {
+      // Firestore save failed, continue with response
     }
 
     return NextResponse.json({
@@ -267,7 +261,6 @@ Response:`;
       })),
     });
   } catch (error) {
-    console.error('[Chat API] Error:', error);
     return NextResponse.json(
       {
         success: false,

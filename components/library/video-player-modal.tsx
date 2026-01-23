@@ -151,8 +151,7 @@ export function VideoPlayerModal({ video, startTime = 0, onClose, onDelete }: Vi
       await api.deleteVideo(video.id)
       onDelete?.(video.id)
       onClose()
-    } catch (error) {
-      console.error("Failed to delete video:", error)
+    } catch {
       alert("Failed to delete video")
     } finally {
       setIsDeleting(false)

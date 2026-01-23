@@ -18,8 +18,6 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  console.log(`[Chat API] Fetching history for conversation: ${conversationId}`);
-
   try {
     const doc = await db.collection('conversations').doc(conversationId).get();
 
@@ -43,7 +41,6 @@ export async function GET(request: NextRequest) {
       createdAt: timestampToDate(data.createdAt),
     });
   } catch (error) {
-    console.error('[Chat API] Error fetching history:', error);
     return NextResponse.json(
       {
         success: false,

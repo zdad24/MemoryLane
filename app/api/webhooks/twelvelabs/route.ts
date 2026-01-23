@@ -11,8 +11,6 @@ import { analyzeVideoContent } from '@/lib/services/gemini';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    console.log('[Webhook] TwelveLabs webhook received:', JSON.stringify(body).slice(0, 500));
-
     const { event, data } = body;
 
     // Handle different webhook events
@@ -27,12 +25,12 @@ export async function POST(request: NextRequest) {
         break;
 
       default:
-        console.log(`[Webhook] Unhandled event type: ${event}`);
+        // Unhandled event type
+        break;
     }
 
     return NextResponse.json({ success: true, message: 'Webhook processed' });
   } catch (error) {
-    console.error('[Webhook] Error processing webhook:', error);
     return NextResponse.json(
       {
         success: false,
@@ -53,10 +51,7 @@ async function handleTaskCompleted(data: {
 }) {
   const { task_id, video_id: tlVideoId, index_id: indexId } = data;
 
-  console.log(`[Webhook] Task completed: ${task_id}, video: ${tlVideoId}`);
-
   if (!tlVideoId || !indexId) {
-    console.error('[Webhook] Missing video_id or index_id in webhook data');
     return;
   }
 
@@ -68,15 +63,12 @@ async function handleTaskCompleted(data: {
     .get();
 
   if (snapshot.empty) {
-    console.error(`[Webhook] Video not found for TwelveLabs ID: ${tlVideoId}`);
     return;
   }
 
   const doc = snapshot.docs[0];
   const videoId = doc.id;
   const videoData = doc.data();
-
-  console.log(`[Webhook] Processing video: ${videoId} (${videoData.originalName})`);
 
   // Extract video data
   await extractVideoData(videoId, tlVideoId, indexId, videoData.originalName || 'video');
@@ -92,10 +84,7 @@ async function handleTaskFailed(data: {
 }) {
   const { task_id, video_id: tlVideoId, error_message } = data;
 
-  console.error(`[Webhook] Task failed: ${task_id}, video: ${tlVideoId}, error: ${error_message}`);
-
   if (!tlVideoId) {
-    console.error('[Webhook] Missing video_id in webhook data');
     return;
   }
 
@@ -107,7 +96,6 @@ async function handleTaskFailed(data: {
     .get();
 
   if (snapshot.empty) {
-    console.error(`[Webhook] Video not found for TwelveLabs ID: ${tlVideoId}`);
     return;
   }
 
@@ -119,8 +107,6 @@ async function handleTaskFailed(data: {
     indexingError: error_message || 'Indexing failed via webhook',
     indexingFailedAt: admin.firestore.FieldValue.serverTimestamp(),
   });
-
-  console.log(`[Webhook] Video marked as failed: ${doc.id}`);
 }
 
 /**
@@ -133,15 +119,12 @@ async function extractVideoData(
   originalName: string
 ) {
   try {
-    console.log(`[Webhook] Extracting data for video: ${tlVideoId}`);
-
     // Get video info from TwelveLabs
     let videoInfo = null;
     try {
       videoInfo = await twelvelabs.index.video.retrieve(indexId, tlVideoId);
-      console.log('[Webhook] Video info retrieved');
-    } catch (error) {
-      console.error('[Webhook] Failed to retrieve video info:', error);
+    } catch {
+      // Failed to retrieve video info
     }
 
     // Analyze video content
@@ -149,7 +132,6 @@ async function extractVideoData(
     let emotionTags: string[] = [];
 
     try {
-      console.log(`[Webhook] Analyzing video content for: ${videoId}`);
       const prompt = `Analyze this video and provide a JSON response with:
 1. "summary": A 2-3 sentence description of what happens in the video, including people, actions, setting, and mood. Make it warm and personal.
 2. "emotionTags": An array of 2-4 single-word emotion tags that capture the feeling of this video.
@@ -173,10 +155,7 @@ Respond with ONLY a valid JSON object.`;
       emotionTags = Array.isArray(data.emotionTags)
         ? data.emotionTags.map((tag: string) => tag.toLowerCase().trim()).slice(0, 4)
         : [];
-
-      console.log(`[Webhook] Video analyzed - tags: ${emotionTags.join(', ')}`);
-    } catch (error) {
-      console.error('[Webhook] TwelveLabs analyze error:', error);
+    } catch {
       // Fallback to Gemini
       const geminiResult = await analyzeVideoContent(originalName);
       if (geminiResult) {
@@ -215,9 +194,7 @@ Respond with ONLY a valid JSON object.`;
     }
 
     await db.collection('videos').doc(videoId).update(updateData);
-    console.log(`[Webhook] Video data saved: ${videoId}`);
   } catch (error) {
-    console.error(`[Webhook] extractVideoData error for ${videoId}:`, error);
     await db.collection('videos').doc(videoId).update({
       indexingStatus: 'failed',
       indexingError: error instanceof Error ? error.message : 'Unknown error',

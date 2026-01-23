@@ -43,8 +43,8 @@ export function ReelConfig({ onGenerate, isGenerating }: ReelConfigProps) {
         ])
         setAvailableEmotions(emotionStats.emotions.slice(0, 8)) // Show top 8 emotions
         setVideos(videosResponse.videos)
-      } catch (error) {
-        console.error("Failed to fetch data:", error)
+      } catch {
+        // Failed to fetch data
       }
     }
     fetchData()

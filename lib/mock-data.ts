@@ -182,39 +182,3 @@ export interface VideoMetadata {
   emotions?: EmotionType[]
   storageUrl?: string
 }
-
-// Mock videos for timeline milestones (placeholder data)
-export const mockVideos: VideoMetadata[] = [
-  {
-    id: "video-1",
-    title: "Summer Vacation 2024",
-    thumbnail: "/placeholder.svg",
-    duration: "2:34",
-    date: "2024-07-15",
-    emotions: ["joy", "excitement"],
-  },
-  {
-    id: "video-2",
-    title: "Birthday Celebration",
-    thumbnail: "/placeholder.svg",
-    duration: "5:12",
-    date: "2024-03-20",
-    emotions: ["joy", "love"],
-  },
-  {
-    id: "video-3",
-    title: "Family Reunion",
-    thumbnail: "/placeholder.svg",
-    duration: "8:45",
-    date: "2024-06-10",
-    emotions: ["love", "nostalgia"],
-  },
-  {
-    id: "video-4",
-    title: "Graduation Day",
-    thumbnail: "/placeholder.svg",
-    duration: "15:30",
-    date: "2024-05-25",
-    emotions: ["joy", "excitement", "nostalgia"],
-  },
-]
