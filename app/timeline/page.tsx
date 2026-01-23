@@ -28,8 +28,9 @@ export default function TimelinePage() {
     return processTimelineDataForChart(data.dataPoints);
   }, [data?.dataPoints]);
 
-  const handleToggleEmotion = (emotion: BaseEmotionType) => {
-    setSelectedEmotions((prev) => (prev.includes(emotion) ? prev.filter((e) => e !== emotion) : [...prev, emotion]))
+  const handleToggleEmotion = (emotion: string) => {
+    const e = emotion as BaseEmotionType
+    setSelectedEmotions((prev) => (prev.includes(e) ? prev.filter((em) => em !== e) : [...prev, e]))
   }
 
   const handleViewVideo = async (videoId: string) => {
@@ -39,8 +40,8 @@ export default function TimelinePage() {
         setSelectedMilestone(null);
         setSelectedVideo(response);
       }
-    } catch (err) {
-      console.error('Failed to load video:', err);
+    } catch {
+      // Failed to load video
     }
   };
 
