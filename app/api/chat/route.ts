@@ -6,12 +6,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, admin, docToVideo, timestampToDate, VideoDocument } from '@/lib/services/firebase-admin';
 import { generateText } from '@/lib/services/gemini';
-import { searchVideos } from '@/lib/services/twelvelabs';
+import { searchVideos, confidenceToScore, ConfidenceThreshold } from '@/lib/services/twelvelabs';
 
 const MAX_CONTEXT_VIDEOS = 5;
 const ATTACH_LIMIT = 3;
+// Higher threshold for chat context - only show high-confidence matches
 const MIN_SCORE_THRESHOLD = 75;
 const HISTORY_LIMIT = 8;
+// Use 'high' threshold for chat to ensure only relevant videos are used as context
+const CHAT_CONFIDENCE_THRESHOLD: ConfidenceThreshold = 'high';
 
 function formatDate(dateValue: Date | string | null | undefined): string {
   if (!dateValue) return 'Unknown date';
@@ -146,16 +149,22 @@ export async function POST(request: NextRequest) {
       candidateVideos = await fetchRecentVideos(1);
     } else {
       try {
-        const searchResults = await searchVideos(message, { page_limit: 10 });
+        // Use high confidence threshold for chat to ensure relevant context
+        const searchResults = await searchVideos(message, { 
+          page_limit: 10,
+          threshold: CHAT_CONFIDENCE_THRESHOLD 
+        });
         const videoIds = searchResults.data.map((r) => r.video_id);
         const videoMap = await fetchVideosByTwelveLabsIds(videoIds);
 
-        // Rank and merge results
+        // Use confidence-based scoring instead of rank-based
         const merged = searchResults.data
           .map((result) => {
             const video = videoMap.get(result.video_id);
             if (!video) return null;
-            const score = Math.max(0, 100 - (result.rank - 1) * 5);
+            // Use actual confidence from TwelveLabs to calculate meaningful score
+            const confidence = result.confidence || 'low';
+            const score = confidenceToScore(confidence, result.rank);
             return { ...video, searchScore: score };
           })
           .filter((v): v is VideoDocument & { searchScore: number } => v !== null && v.searchScore >= MIN_SCORE_THRESHOLD)

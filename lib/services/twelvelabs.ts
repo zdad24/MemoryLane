@@ -7,6 +7,44 @@ const API_KEY = process.env.TWELVELABS_API_KEY;
 const BASE_URL = 'https://api.twelvelabs.io/v1.3';
 const INDEX_NAME = 'My Index (Default)';
 
+// Confidence threshold levels for search filtering
+export type ConfidenceThreshold = 'high' | 'medium' | 'low' | 'none';
+
+// Confidence level returned by TwelveLabs API
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
+// Search result item with confidence
+export interface SearchResultItem {
+  video_id: string;
+  rank: number;
+  start: number;
+  end: number;
+  confidence: ConfidenceLevel;
+  thumbnail_url?: string;
+}
+
+// Search options for TwelveLabs API
+export interface SearchOptions {
+  search_options?: string[];
+  page_limit?: number;
+  threshold?: ConfidenceThreshold;
+}
+
+// Helper to convert confidence level to percentage score
+export function confidenceToScore(confidence: ConfidenceLevel, rank: number): number {
+  // Base score from confidence level
+  const baseScores: Record<ConfidenceLevel, { min: number; max: number }> = {
+    high: { min: 85, max: 100 },
+    medium: { min: 60, max: 84 },
+    low: { min: 30, max: 59 },
+  };
+
+  const range = baseScores[confidence];
+  // Use rank to differentiate within the confidence range (lower rank = higher score)
+  const rankPenalty = Math.min((rank - 1) * 3, range.max - range.min);
+  return Math.max(range.min, range.max - rankPenalty);
+}
+
 // FormData helper for multipart requests
 async function formDataRequest(
   endpoint: string,
@@ -134,15 +172,9 @@ export const twelvelabs = {
     async query(
       indexId: string,
       query: string,
-      options: { search_options?: string[]; page_limit?: number } = {}
+      options: SearchOptions = {}
     ): Promise<{
-      data: Array<{
-        video_id: string;
-        rank: number;
-        start: number;
-        end: number;
-        thumbnail_url?: string;
-      }>;
+      data: SearchResultItem[];
     }> {
       const formData = new FormData();
       formData.append('index_id', indexId);
@@ -155,14 +187,13 @@ export const twelvelabs = {
       if (options.page_limit) {
         formData.append('page_limit', options.page_limit.toString());
       }
+      // Add threshold parameter to filter low-confidence results at API level
+      // Default to 'medium' to exclude low-confidence matches
+      const threshold = options.threshold ?? 'medium';
+      formData.append('threshold', threshold);
+      
       return formDataRequest('/search', formData) as Promise<{
-        data: Array<{
-          video_id: string;
-          rank: number;
-          start: number;
-          end: number;
-          thumbnail_url?: string;
-        }>;
+        data: SearchResultItem[];
       }>;
     },
   },
@@ -233,15 +264,9 @@ export async function getOrCreateIndex(): Promise<string> {
  */
 export async function searchVideos(
   query: string,
-  options: { page_limit?: number } = {}
+  options: SearchOptions = {}
 ): Promise<{
-  data: Array<{
-    video_id: string;
-    rank: number;
-    start: number;
-    end: number;
-    thumbnail_url?: string;
-  }>;
+  data: SearchResultItem[];
 }> {
   console.log(`[TwelveLabs] Searching for: "${query}"`);
 
@@ -249,7 +274,7 @@ export async function searchVideos(
   const indexDetails = await twelvelabs.index.get(indexId);
   const searchOptions = indexDetails.models?.[0]?.model_options || ['visual'];
 
-  console.log(`[TwelveLabs] Using search options: ${searchOptions.join(', ')}`);
+  console.log(`[TwelveLabs] Using search options: ${searchOptions.join(', ')}, threshold: ${options.threshold ?? 'medium'}`);
 
   const results = await twelvelabs.search.query(indexId, query, {
     search_options: searchOptions,
